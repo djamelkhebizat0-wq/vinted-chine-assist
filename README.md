@@ -72,7 +72,7 @@ Utilisez l’outil de façon **raisonnable et manuelle**. Spam, harcèlement com
 - `content.js` / `content.css` — bulle
 - `options.*` — réglages (responsive)
 - `crm.html` / `crm.js` — tableau CRM
-- `packing-slip.html` — bons d’emballage
+- `packing-slip.html` / `packing-slip.js` — bons d’emballage
 - `popup.*` — statut rapide
 - `docs/ARCHITECTURE-CLOUD.md` — ce qu’il faudrait pour un vrai 24/7
 - `tests/run.mjs` — tests du moteur (Node)
