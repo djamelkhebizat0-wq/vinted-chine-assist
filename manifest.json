@@ -1,12 +1,21 @@
 {
   "manifest_version": 3,
   "name": "Vinted Chine Assist",
-  "version": "1.0.0",
-  "description": "Assistant de messages et négociation pour Vinted — modèles, réponses rapides et conseils (usage personnel).",
-  "permissions": ["storage", "activeTab"],
+  "version": "1.1.0",
+  "description": "Assistant vendeur Vinted (usage personnel) : négo locale, CRM, repost, messages, colis — sans cloud fictif.",
+  "minimum_chrome_version": "114",
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications",
+    "activeTab"
+  ],
   "host_permissions": [
     "https://www.vinted.fr/*",
     "https://www.vinted.com/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -30,7 +39,7 @@
         "https://www.vinted.fr/*",
         "https://www.vinted.com/*"
       ],
-      "js": ["content.js"],
+      "js": ["lib/shared.js", "lib/nego.js", "content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
     }

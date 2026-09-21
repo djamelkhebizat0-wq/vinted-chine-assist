@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRM vendeur — Vinted Chine Assist</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="main" style="max-width:1100px;margin:0 auto;">
+    <header class="top">
+      <div class="brand" style="display:flex;gap:12px;align-items:center;">
+        <div class="logo" style="width:40px;height:40px;border-radius:10px;background:linear-gradient(145deg,#099a8e,#0cc4b3);"></div>
+        <div>
+          <h2>CRM vendeur</h2>
+          <p class="desc" style="margin:0">Données locales · export CSV · usage personnel</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <a class="btn ghost" href="options.html" style="text-decoration:none;display:inline-flex;align-items:center;">Paramètres</a>
+        <a class="btn ghost" href="packing-slip.html" style="text-decoration:none;display:inline-flex;align-items:center;">Bons de livraison</a>
+        <button type="button" class="btn sm" id="btnAdd">+ Article</button>
+        <button type="button" class="btn sm" id="btnExport">Export CSV</button>
+        <label class="btn sm file-btn">Import CSV<input type="file" id="imp" accept=".csv,text/csv" hidden /></label>
+        <button type="button" class="btn primary" id="btnSave">Enregistrer</button>
+      </div>
+    </header>
+    <div id="toast" class="toast" hidden></div>
+    <section class="panel">
+      <div class="kpis" id="kpis"></div>
+    </section>
+    <section class="panel">
+      <div class="table-wrap">
+        <table class="grid" id="crmTable">
+          <thead>
+            <tr>
+              <th>Titre</th>
+              <th>URL annonce</th>
+              <th>Achat €</th>
+              <th>Vente €</th>
+              <th>Frais €</th>
+              <th>Port €</th>
+              <th>Statut</th>
+              <th>Vendu le</th>
+              <th>Marge nette</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  <script src="lib/shared.js"></script>
+  <script src="crm.js"></script>
+</body>
+</html>

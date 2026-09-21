@@ -78,10 +78,10 @@ h1 {
   text-align: center;
   padding: 10px 8px;
 }
-.stat .num { display: block; font-size: 18px; font-weight: 700; color: var(--teal); }
+.stat .num { display: block; font-size: 16px; font-weight: 700; color: var(--teal); }
 .stat .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 
-.actions { display: flex; gap: 8px; margin-bottom: 10px; }
+.actions { display: flex; gap: 8px; margin-bottom: 8px; }
 
 .btn {
   flex: 1;
@@ -103,5 +103,5 @@ h1 {
 }
 .btn.ghost:hover { background: #eef5f3; }
 
-.ft { text-align: center; color: var(--muted); }
+.ft { text-align: center; color: var(--muted); margin-top: 4px; }
 .ft small { font-size: 10px; }
