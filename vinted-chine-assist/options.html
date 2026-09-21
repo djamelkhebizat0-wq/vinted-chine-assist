@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paramètres — Vinted Chine Assist</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Vinted Chine Assist</h1>
+          <p>Modèles, réponses rapides & négociation</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button type="button" class="btn ghost" id="btnReset">Réinitialiser</button>
+        <button type="button" class="btn primary" id="btnSave">Enregistrer</button>
+      </div>
+    </header>
+
+    <div id="toast" class="toast" hidden></div>
+
+    <section class="panel">
+      <h2>Négociation</h2>
+      <p class="desc">Conseils affichés dans la bulle (calcul local, sans API Vinted).</p>
+      <div class="grid2">
+        <label class="field">
+          <span>Accepter si l'offre est à moins de</span>
+          <div class="input-row">
+            <input type="number" id="floorPct" min="0" max="50" step="1" />
+            <span class="suffix">% du prix</span>
+          </div>
+          <small>Ex. 15 % → prix 40 €, acceptez dès 34 €.</small>
+        </label>
+        <label class="field">
+          <span>Contre-offre suggérée (−)</span>
+          <div class="input-row">
+            <input type="number" id="counterPct" min="0" max="40" step="1" />
+            <span class="suffix">% du prix</span>
+          </div>
+          <small>Ex. 8 % → contre-offre autour de 36,80 € pour 40 €.</small>
+        </label>
+      </div>
+      <label class="check">
+        <input type="checkbox" id="bubbleEnabled" checked />
+        <span>Afficher la bulle flottante sur Vinted</span>
+      </label>
+    </section>
+
+    <section class="panel">
+      <div class="panel-hd">
+        <h2>Messages favoris</h2>
+        <button type="button" class="btn sm" id="btnAddFav">+ Ajouter</button>
+      </div>
+      <p class="desc">Idéaux pour relancer après un ❤️ (urgence, offre, lot…).</p>
+      <div id="favorisList" class="tpl-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-hd">
+        <h2>Réponses rapides</h2>
+        <button type="button" class="btn sm" id="btnAddRr">+ Ajouter</button>
+      </div>
+      <p class="desc">Utilisez <code>{{contre}}</code> pour injecter le montant de contre-offre calculé.</p>
+      <div id="rrList" class="tpl-list"></div>
+    </section>
+
+    <section class="panel warn">
+      <h2>Avertissement</h2>
+      <p>Cet outil aide à rédiger des messages manuellement. Il ne contourne pas les règles Vinted, n’automatise pas le spam, et n’utilise pas de comptes multiples / proxies. Un usage abusif peut entraîner la suspension de votre compte — respectez les CGU.</p>
+    </section>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>

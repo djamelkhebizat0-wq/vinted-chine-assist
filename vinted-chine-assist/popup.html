@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vinted Chine Assist</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="hdr">
+    <div class="logo" aria-hidden="true"></div>
+    <div>
+      <h1>Vinted Chine Assist</h1>
+      <p class="sub">Messages & négociation</p>
+    </div>
+  </header>
+
+  <section class="card status">
+    <div class="row">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Vérification…</span>
+    </div>
+    <p class="hint" id="pageHint">Ouvrez une page Vinted pour utiliser la bulle.</p>
+  </section>
+
+  <section class="card stats">
+    <div class="stat">
+      <span class="num" id="favCount">—</span>
+      <span class="lbl">Favoris</span>
+    </div>
+    <div class="stat">
+      <span class="num" id="rrCount">—</span>
+      <span class="lbl">Réponses</span>
+    </div>
+    <div class="stat">
+      <span class="num" id="floorPct">—</span>
+      <span class="lbl">Seuil négo</span>
+    </div>
+  </section>
+
+  <nav class="actions">
+    <button type="button" class="btn primary" id="btnOptions">Paramètres</button>
+    <button type="button" class="btn ghost" id="btnToggleBubble">Bulle : on</button>
+  </nav>
+
+  <footer class="ft">
+    <small>Usage personnel · respectez les CGU Vinted</small>
+  </footer>
+  <script src="popup.js"></script>
+</body>
+</html>

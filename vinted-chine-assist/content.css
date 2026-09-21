@@ -1,0 +1,263 @@
+/* Vinted Chine Assist — bulle flottante (scoped) */
+#vca-root {
+  all: initial;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif !important;
+  position: fixed !important;
+  right: 18px !important;
+  bottom: 18px !important;
+  z-index: 2147483000 !important;
+  color: #142421 !important;
+}
+
+#vca-root * {
+  box-sizing: border-box !important;
+  font-family: inherit !important;
+}
+
+#vca-fab {
+  width: 54px !important;
+  height: 54px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  cursor: pointer !important;
+  background: linear-gradient(145deg, #099a8e, #0bbfaf) !important;
+  color: #fff !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 8px 24px rgba(9, 154, 142, 0.45) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform 0.15s ease, box-shadow 0.15s !important;
+  line-height: 1 !important;
+}
+
+#vca-fab:hover {
+  transform: scale(1.06) !important;
+  box-shadow: 0 10px 28px rgba(9, 154, 142, 0.55) !important;
+}
+
+#vca-panel {
+  display: none;
+  width: 340px !important;
+  max-height: min(72vh, 560px) !important;
+  overflow: auto !important;
+  margin-bottom: 12px !important;
+  background: #fff !important;
+  border-radius: 16px !important;
+  border: 1px solid #cfe0dc !important;
+  box-shadow: 0 16px 40px rgba(20, 36, 33, 0.18) !important;
+  padding: 0 !important;
+}
+
+#vca-root.open #vca-panel {
+  display: block !important;
+}
+
+.vca-hd {
+  position: sticky !important;
+  top: 0 !important;
+  background: #fff !important;
+  padding: 14px 14px 10px !important;
+  border-bottom: 1px solid #e4eeeb !important;
+  z-index: 2 !important;
+}
+
+.vca-hd h2 {
+  margin: 0 !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #142421 !important;
+}
+
+.vca-hd p {
+  margin: 4px 0 0 !important;
+  font-size: 11px !important;
+  color: #5a716c !important;
+}
+
+.vca-tabs {
+  display: flex !important;
+  gap: 4px !important;
+  padding: 8px 10px !important;
+  background: #f4f9f8 !important;
+  border-bottom: 1px solid #e4eeeb !important;
+  position: sticky !important;
+  top: 58px !important;
+  z-index: 2 !important;
+}
+
+.vca-tab {
+  flex: 1 !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 8px 6px !important;
+  border-radius: 8px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #5a716c !important;
+  cursor: pointer !important;
+}
+
+.vca-tab.active {
+  background: #fff !important;
+  color: #099a8e !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+}
+
+.vca-body {
+  padding: 10px 12px 14px !important;
+}
+
+.vca-section-label {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: #7a908b !important;
+  margin: 8px 2px 6px !important;
+}
+
+.vca-btn {
+  display: block !important;
+  width: 100% !important;
+  text-align: left !important;
+  border: 1px solid #d7e5e2 !important;
+  background: #f9fcfb !important;
+  border-radius: 10px !important;
+  padding: 10px 12px !important;
+  margin-bottom: 6px !important;
+  cursor: pointer !important;
+  transition: background 0.12s, border-color 0.12s !important;
+}
+
+.vca-btn:hover {
+  background: #e8f6f3 !important;
+  border-color: #099a8e !important;
+}
+
+.vca-btn strong {
+  display: block !important;
+  font-size: 12px !important;
+  color: #142421 !important;
+  margin-bottom: 3px !important;
+}
+
+.vca-btn span {
+  display: block !important;
+  font-size: 11px !important;
+  color: #5a716c !important;
+  line-height: 1.35 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.vca-nego {
+  background: #f0faf8 !important;
+  border: 1px solid #c5e6e1 !important;
+  border-radius: 12px !important;
+  padding: 12px !important;
+  margin-bottom: 8px !important;
+}
+
+.vca-nego label {
+  display: block !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #5a716c !important;
+  margin-bottom: 4px !important;
+}
+
+.vca-nego input {
+  width: 100% !important;
+  padding: 8px 10px !important;
+  border: 1px solid #cfe0dc !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  margin-bottom: 8px !important;
+  background: #fff !important;
+  color: #142421 !important;
+}
+
+.vca-result {
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  color: #142421 !important;
+  padding: 8px !important;
+  background: #fff !important;
+  border-radius: 8px !important;
+  border: 1px dashed #b5d4cf !important;
+  min-height: 48px !important;
+}
+
+.vca-result.ok { border-color: #1a9f6e !important; background: #f0faf5 !important; }
+.vca-result.warn { border-color: #c9891a !important; background: #fffaf0 !important; }
+
+.vca-check {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.vca-check li {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 8px !important;
+  font-size: 12px !important;
+  color: #142421 !important;
+  padding: 8px !important;
+  border-radius: 8px !important;
+  margin-bottom: 4px !important;
+  background: #f9fcfb !important;
+  border: 1px solid #e4eeeb !important;
+}
+
+.vca-check input {
+  margin-top: 2px !important;
+  accent-color: #099a8e !important;
+}
+
+.vca-ft {
+  padding: 8px 12px 12px !important;
+  font-size: 10px !important;
+  color: #7a908b !important;
+  text-align: center !important;
+}
+
+.vca-toast {
+  position: fixed !important;
+  bottom: 80px !important;
+  right: 18px !important;
+  background: #142421 !important;
+  color: #fff !important;
+  padding: 10px 14px !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2) !important;
+  z-index: 2147483001 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.2s !important;
+}
+
+.vca-toast.show {
+  opacity: 1 !important;
+}
+
+.vca-pane { display: none !important; }
+.vca-pane.active { display: block !important; }
+
+.vca-link {
+  display: inline-block !important;
+  margin-top: 6px !important;
+  font-size: 11px !important;
+  color: #099a8e !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  text-decoration: underline !important;
+}
