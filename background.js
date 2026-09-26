@@ -1,11 +1,12 @@
 /**
- * Service worker MV3 — alarmes locales, notifications, IA optionnelle, navigation.
- * Rien n'est envoyé vers un « cloud Vinted Chine Assist » : tout reste dans Chrome.
+ * Service worker MV3 — alarmes locales, Mode auto, garde-fous, IA optionnelle.
+ * Aucun backend cloud : tout s'arrête quand Chrome est fermé.
  */
 /* global importScripts, VCA */
-importScripts("lib/shared.js", "lib/nego.js");
+importScripts("lib/shared.js", "lib/nego.js", "lib/guard.js");
 
 const ALARM_REPOST = "vca-repost";
+const ALARM_INBOX = "vca-inbox-poll";
 const PREFIX_SCHED = "vca-sched-";
 const PREFIX_SAV = "vca-sav-";
 
@@ -14,6 +15,17 @@ async function syncRepostAlarm() {
   await chrome.alarms.clear(ALARM_REPOST);
   const minutes = Math.max(15, Number(settings.repostIntervalMinutes) || 60);
   await chrome.alarms.create(ALARM_REPOST, {
+    delayInMinutes: minutes,
+    periodInMinutes: minutes
+  });
+}
+
+async function syncInboxAlarm() {
+  const { settings } = await VCA.loadAll();
+  await chrome.alarms.clear(ALARM_INBOX);
+  if (!settings.modeAuto) return;
+  const minutes = Math.max(1, Number(settings.autoInboxPollMinutes) || 1);
+  await chrome.alarms.create(ALARM_INBOX, {
     delayInMinutes: minutes,
     periodInMinutes: minutes
   });
@@ -58,6 +70,13 @@ async function syncPostsaleAlarms() {
   }
 }
 
+async function syncAllAlarms() {
+  await syncRepostAlarm();
+  await syncInboxAlarm();
+  await syncScheduleAlarms();
+  await syncPostsaleAlarms();
+}
+
 async function rememberNotifyUrl(notifId, url) {
   const data = await VCA.storageGet([VCA.KEYS.notifyUrls]);
   const map = data[VCA.KEYS.notifyUrls] || {};
@@ -80,6 +99,55 @@ function notify(id, title, message, url) {
   if (url) rememberNotifyUrl(id, url);
 }
 
+async function updateBadge() {
+  const { settings } = await VCA.loadAll();
+  if (settings.modeAuto) {
+    const g = await VCA.loadGuard();
+    chrome.action.setBadgeBackgroundColor({ color: "#c23b3b" });
+    chrome.action.setBadgeText({ text: g.state.messagesSent > 0 ? String(g.state.messagesSent) : "ON" });
+    chrome.action.setTitle({ title: "Vinted Chine Assist — Mode auto ON" });
+  } else {
+    chrome.action.setBadgeText({ text: "" });
+    chrome.action.setTitle({ title: "Vinted Chine Assist" });
+  }
+}
+
+async function writeLog(entry) {
+  const g = await VCA.loadGuard();
+  const log = VCA.appendAutoLog(g.log, entry);
+  await VCA.saveGuard(g.state, log);
+}
+
+let reserveChain = Promise.resolve();
+
+async function reserveGuard(kind, conversationId, processKey) {
+  const run = async () => {
+  const g = await VCA.loadGuard();
+  const check = VCA.guardCheck(g.settings, g.state, kind, conversationId);
+  if (!check.ok) {
+    await writeLog({
+      type: kind,
+      target: conversationId || "",
+      ok: false,
+      error: check.reason,
+      detail: VCA.guardReasonLabel(check.reason)
+    });
+    return { ok: false, reason: check.reason, waitSeconds: check.waitSeconds };
+  }
+  if (processKey && VCA.wasProcessed(g.state, processKey)) {
+    return { ok: false, reason: "already" };
+  }
+  let state = VCA.guardRecord(g.state, kind, conversationId);
+  if (processKey) state = VCA.markProcessed(state, processKey);
+  await VCA.saveGuard(state, g.log);
+  await updateBadge();
+  return { ok: true };
+  };
+  const done = reserveChain.then(run, run);
+  reserveChain = done.catch(() => {});
+  return done;
+}
+
 async function nextRepostItem(rotate) {
   const { repost } = await VCA.loadAll();
   if (!repost.length) return null;
@@ -93,10 +161,190 @@ async function nextRepostItem(rotate) {
   return item;
 }
 
-async function openUrl(url) {
+async function openUrl(url, active) {
   if (!url) return { ok: false };
-  await chrome.tabs.create({ url });
-  return { ok: true };
+  const tab = await chrome.tabs.create({ url, active: active !== false });
+  return { ok: true, tabId: tab.id };
+}
+
+function waitTabComplete(tabId, ms) {
+  const limit = ms || 20000;
+  const start = Date.now();
+  return new Promise((resolve) => {
+    const t = setInterval(async () => {
+      try {
+        const tab = await chrome.tabs.get(tabId);
+        if (tab.status === "complete" && Date.now() - start > 800) {
+          clearInterval(t);
+          resolve(tab);
+        }
+      } catch (_) {
+        clearInterval(t);
+        resolve(null);
+      }
+      if (Date.now() - start > limit) {
+        clearInterval(t);
+        resolve(null);
+      }
+    }, 400);
+  });
+}
+
+async function pingTab(tabId, message) {
+  try {
+    return await chrome.tabs.sendMessage(tabId, message);
+  } catch (_) {
+    return { ok: false, error: "no-content" };
+  }
+}
+
+async function vintedTabs() {
+  const tabs = await chrome.tabs.query({
+    url: ["https://www.vinted.fr/*", "https://www.vinted.com/*"]
+  });
+  return tabs || [];
+}
+
+async function ensureInboxTab() {
+  const tabs = await vintedTabs();
+  const inbox = tabs.find((t) => /\/inbox/i.test(t.url || ""));
+  if (inbox) return inbox;
+  const any = tabs[0];
+  if (any) {
+    const origin = (any.url || "").startsWith("https://www.vinted.com")
+      ? "https://www.vinted.com"
+      : "https://www.vinted.fr";
+    const created = await chrome.tabs.create({ url: `${origin}/inbox`, active: false });
+    await waitTabComplete(created.id);
+    return created;
+  }
+  const created = await chrome.tabs.create({ url: "https://www.vinted.fr/inbox", active: false });
+  await waitTabComplete(created.id);
+  return created;
+}
+
+async function tickInboxTabs() {
+  const { settings } = await VCA.loadAll();
+  if (!settings.modeAuto) return { skipped: "off" };
+  let tabs = await vintedTabs();
+  if (!tabs.length) {
+    const inbox = await ensureInboxTab();
+    tabs = inbox ? [inbox] : [];
+  }
+  const results = [];
+  for (const tab of tabs) {
+    if (!tab.id) continue;
+    const res = await pingTab(tab.id, { type: "VCA_AUTO_TICK" });
+    results.push({ tabId: tab.id, url: tab.url, res });
+    if (res?.unread?.length) {
+      const href = res.unread[0];
+      const existing = tabs.find((t) => t.url && href && t.url.split("?")[0] === href.split("?")[0]);
+      if (!existing) {
+        const opened = await chrome.tabs.create({ url: href, active: false });
+        await waitTabComplete(opened.id, 12000);
+        await new Promise((r) => setTimeout(r, 1200));
+        results.push({
+          tabId: opened.id,
+          url: href,
+          res: await pingTab(opened.id, { type: "VCA_AUTO_SEND_NEGO" })
+        });
+      }
+    }
+  }
+  return { ok: true, results };
+}
+
+async function executeAutoRepost() {
+  const { settings, repost } = await VCA.loadAll();
+  if (!repost.length) return { ok: false, error: "File vide" };
+  const item = repost[0];
+  if (!settings.modeAuto || !settings.autoRepostDo) {
+    notify("vca-repost-" + Date.now(), "Repost — prochain article", item.title || item.url, item.url);
+    if (settings.repostAutoOpen && item.url) {
+      await openUrl(item.url, true);
+      await nextRepostItem(true);
+    }
+    return { ok: true, mode: "notify" };
+  }
+  const gate = await reserveGuard("repost", item.id || item.url, `repost:${item.id || item.url}:${item.lastOpenedAt || ""}`);
+  if (!gate.ok) {
+    notify("vca-repost-skip", "Repost reporté", VCA.guardReasonLabel(gate.reason), item.url);
+    return { ok: false, reason: gate.reason };
+  }
+  if (!item.url) return { ok: false, error: "no-url" };
+  const tab = await chrome.tabs.create({ url: item.url, active: false });
+  await waitTabComplete(tab.id);
+  await new Promise((r) => setTimeout(r, 1400));
+  let res = await pingTab(tab.id, { type: "VCA_AUTO_REPOST_THIS" });
+  if (res?.mode === "goto-edit") {
+    await waitTabComplete(tab.id, 15000);
+    await new Promise((r) => setTimeout(r, 1600));
+    res = await pingTab(tab.id, { type: "VCA_AUTO_REPOST_THIS" });
+  }
+  await nextRepostItem(true);
+  await writeLog({
+    type: "repost",
+    target: item.url,
+    ok: !!res?.ok,
+    error: res?.error || "",
+    detail: res?.mode || ""
+  });
+  notify(
+    "vca-repost-" + Date.now(),
+    res?.ok ? "Repost auto effectué" : "Repost auto — échec",
+    item.title || item.url,
+    item.url
+  );
+  return res || { ok: false };
+}
+
+async function executeAutoPostsale(job, kind) {
+  const { settings } = await VCA.loadAll();
+  if (!job) return;
+  if (!settings.modeAuto || !settings.autoPostSaleSend) {
+    notify(
+      "vca-sav-" + job.id,
+      kind === "avis" ? "Demande d'avis" : "Remerciement post-vente",
+      job.title || "",
+      job.url
+    );
+    return { mode: "notify" };
+  }
+  if (!job.url) {
+    await writeLog({ type: "postsale", target: job.id, ok: false, error: "no-url" });
+    return { ok: false };
+  }
+  const tab = await chrome.tabs.create({ url: job.url, active: false });
+  await waitTabComplete(tab.id);
+  await new Promise((r) => setTimeout(r, 1200));
+  const res = await pingTab(tab.id, { type: "VCA_AUTO_SEND_SAV", kind });
+  if (res?.ok) {
+    const { postsale } = await VCA.loadAll();
+    const j = postsale.find((x) => x.id === job.id);
+    if (j) {
+      if (kind === "avis") j.reviewDone = true;
+      else j.thankYouDone = true;
+      await VCA.storageSet({ [VCA.KEYS.postsale]: postsale });
+    }
+  }
+  return res;
+}
+
+async function setModeAuto(on) {
+  const all = await VCA.loadAll();
+  all.settings.modeAuto = !!on;
+  await VCA.storageSet({ [VCA.KEYS.settings]: all.settings });
+  const tabs = await vintedTabs();
+  await Promise.all(tabs.map((t) => pingTab(t.id, { type: on ? "VCA_AUTO_RESUME" : "VCA_AUTO_KILL" })));
+  await syncInboxAlarm();
+  await updateBadge();
+  await writeLog({
+    type: "system",
+    target: "",
+    ok: true,
+    detail: on ? "Mode auto activé" : "Mode auto / STOP"
+  });
+  return { ok: true, modeAuto: !!on };
 }
 
 async function openUrlsStaggered(urls) {
@@ -112,21 +360,21 @@ async function openUrlsStaggered(urls) {
 
 chrome.runtime.onInstalled.addListener(async () => {
   await VCA.ensureInstalledDefaults();
-  await syncRepostAlarm();
-  await syncScheduleAlarms();
-  await syncPostsaleAlarms();
+  await syncAllAlarms();
+  await updateBadge();
 });
 
 chrome.runtime.onStartup.addListener(async () => {
-  await syncRepostAlarm();
-  await syncScheduleAlarms();
-  await syncPostsaleAlarms();
+  await syncAllAlarms();
+  await updateBadge();
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
   if (changes[VCA.KEYS.settings] || changes[VCA.KEYS.repost]) {
     syncRepostAlarm();
+    syncInboxAlarm();
+    updateBadge();
   }
   if (changes[VCA.KEYS.schedule]) syncScheduleAlarms();
   if (changes[VCA.KEYS.postsale]) syncPostsaleAlarms();
@@ -134,20 +382,12 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   const name = alarm?.name || "";
+  if (name === ALARM_INBOX) {
+    await tickInboxTabs();
+    return;
+  }
   if (name === ALARM_REPOST) {
-    const { settings, repost } = await VCA.loadAll();
-    if (!repost.length) return;
-    const item = repost[0];
-    notify(
-      "vca-repost-" + Date.now(),
-      "Repost — prochain article",
-      item.title || item.url || "Article en file",
-      item.url
-    );
-    if (settings.repostAutoOpen && item.url) {
-      await openUrl(item.url);
-      await nextRepostItem(true);
-    }
+    await executeAutoRepost();
     return;
   }
   if (name.startsWith(PREFIX_SCHED)) {
@@ -169,13 +409,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     const { postsale } = await VCA.loadAll();
     const job = postsale.find((j) => j.id === jobId);
     if (!job) return;
-    const kind = isAvis ? "Demande d'avis" : "Remerciement post-vente";
-    notify(
-      name + "-" + Date.now(),
-      kind,
-      job.title || "Ouvrir la conversation",
-      job.url
-    );
+    await executeAutoPostsale(job, isAvis ? "avis" : "merci");
   }
 });
 
@@ -254,14 +488,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
   if (type === "VCA_REPOST_NEXT") {
-    nextRepostItem(true).then(async (item) => {
-      if (!item) {
-        sendResponse({ ok: false, error: "File vide" });
-        return;
-      }
-      if (item.url) await openUrl(item.url);
-      sendResponse({ ok: true, item });
-    });
+    executeAutoRepost().then(sendResponse);
     return true;
   }
   if (type === "VCA_NOTIFY") {
@@ -270,9 +497,41 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
   if (type === "VCA_SYNC_ALARMS") {
-    Promise.all([syncRepostAlarm(), syncScheduleAlarms(), syncPostsaleAlarms()]).then(() => {
-      sendResponse({ ok: true });
-    });
+    syncAllAlarms().then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (type === "VCA_SET_MODE_AUTO") {
+    setModeAuto(!!msg.on).then(sendResponse);
+    return true;
+  }
+  if (type === "VCA_KILL_AUTO") {
+    setModeAuto(false).then(sendResponse);
+    return true;
+  }
+  if (type === "VCA_GUARD_RESERVE") {
+    reserveGuard(msg.kind || "message", msg.conversationId, msg.processKey).then(sendResponse);
+    return true;
+  }
+  if (type === "VCA_AUTO_LOG") {
+    writeLog(msg).then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (type === "VCA_AUTO_STATUS") {
+    (async () => {
+      const all = await VCA.loadAll();
+      const g = await VCA.loadGuard();
+      sendResponse({
+        ok: true,
+        modeAuto: !!all.settings.modeAuto,
+        settings: {
+          autoDailyMessageCap: all.settings.autoDailyMessageCap,
+          autoDailyRepostCap: all.settings.autoDailyRepostCap,
+          autoMinDelaySeconds: all.settings.autoMinDelaySeconds
+        },
+        state: g.state,
+        log: g.log.slice(0, 12)
+      });
+    })();
     return true;
   }
   if (type === "VCA_AI_NEGO") {
@@ -297,12 +556,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (ai.ok) merged = VCA.clampAiResult(local, ai.suggested);
       sendResponse({ ok: true, local: merged, ai, message: ai.message || null });
     })();
-    return true;
-  }
-  if (type === "VCA_REQUEST_AI_PERMISSION") {
-    chrome.permissions.request({ origins: ["https://*/*"] }, (granted) => {
-      sendResponse({ ok: !!granted });
-    });
     return true;
   }
   return false;

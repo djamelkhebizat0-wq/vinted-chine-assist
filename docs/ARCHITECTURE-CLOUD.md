@@ -1,6 +1,6 @@
 # Architecture : un vrai « Cloud 24/7 » (non implémenté)
 
-Cette extension **n’inclut pas** de backend. L’onglet Cloud de l’interface le rappelle : tout est local (`chrome.storage.local`, `chrome.alarms`, content scripts sur vinted.fr / vinted.com).
+Cette extension **n’inclut pas** de backend. Depuis **1.2.0**, un **Mode auto local** peut envoyer des messages / exécuter des reposts **tant que Chrome est ouvert**. Ce n’est toujours **pas** un cloud 24/7 : fermer le navigateur arrête tout.
 
 Les alarmes et notifications **s’arrêtent** lorsque Chrome est fermé, mis en veille profonde, ou lorsque le service worker est inactif trop longtemps sans événement. Ce n’est **pas** un robot 24/7.
 

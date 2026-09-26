@@ -1,6 +1,7 @@
 /* global VCA */
 const TITLES = {
   dash: "Tableau de bord",
+  auto: "Mode auto",
   crm: "CRM vendeur",
   nego: "Négo auto",
   msg: "Messages favoris",
@@ -49,6 +50,14 @@ function readSettingsFromForm() {
   s.feeFixed = num("feeFixed") || 0;
   s.defaultShippingCost = num("defaultShippingCost") || 0;
   s.autoReplyEnabled = document.getElementById("autoReplyEnabled").checked;
+  s.modeAuto = document.getElementById("modeAuto").checked;
+  s.autoNegoSend = document.getElementById("autoNegoSend").checked;
+  s.autoRepostDo = document.getElementById("autoRepostDo").checked;
+  s.autoPostSaleSend = document.getElementById("autoPostSaleSend").checked;
+  s.autoMinDelaySeconds = Math.max(15, num("autoMinDelaySeconds") || 60);
+  s.autoDailyMessageCap = Math.max(1, num("autoDailyMessageCap") || 40);
+  s.autoDailyRepostCap = Math.max(1, num("autoDailyRepostCap") || 20);
+  s.autoConversationCooldownMinutes = Math.max(5, num("autoConversationCooldownMinutes") || 90);
   s.bubbleEnabled = document.getElementById("bubbleEnabled").checked;
   s.openaiApiKey = document.getElementById("openaiApiKey").value.trim();
   s.openaiBaseUrl = document.getElementById("openaiBaseUrl").value.trim() || VCA.DEFAULT_SETTINGS.openaiBaseUrl;
@@ -75,6 +84,14 @@ function fillSettingsForm() {
   set("feeFixed", s.feeFixed);
   set("defaultShippingCost", s.defaultShippingCost);
   document.getElementById("autoReplyEnabled").checked = !!s.autoReplyEnabled;
+  document.getElementById("modeAuto").checked = !!s.modeAuto;
+  document.getElementById("autoNegoSend").checked = s.autoNegoSend !== false;
+  document.getElementById("autoRepostDo").checked = s.autoRepostDo !== false;
+  document.getElementById("autoPostSaleSend").checked = s.autoPostSaleSend !== false;
+  set("autoMinDelaySeconds", s.autoMinDelaySeconds ?? 60);
+  set("autoDailyMessageCap", s.autoDailyMessageCap ?? 40);
+  set("autoDailyRepostCap", s.autoDailyRepostCap ?? 20);
+  set("autoConversationCooldownMinutes", s.autoConversationCooldownMinutes ?? 90);
   document.getElementById("bubbleEnabled").checked = s.bubbleEnabled !== false;
   set("openaiApiKey", s.openaiApiKey);
   set("openaiBaseUrl", s.openaiBaseUrl);
@@ -404,6 +421,27 @@ function renderAll() {
   renderSav();
   renderProfiles();
   renderSched();
+  renderAutoLog();
+}
+
+function renderAutoLog() {
+  const box = document.getElementById("autoStatusBox");
+  const list = document.getElementById("autoLogBox");
+  if (!box || !list) return;
+  const st = VCA.normalizeAutoState(state.autoState);
+  box.textContent = `Aujourd’hui : ${st.messagesSent} messages · ${st.repostsDone} reposts. Mode auto ${state.settings.modeAuto ? "ON" : "OFF"}.`;
+  const log = state.autoLog || [];
+  if (!log.length) {
+    list.innerHTML = '<p class="desc">Journal vide.</p>';
+    return;
+  }
+  list.innerHTML = "";
+  log.slice(0, 25).forEach((e) => {
+    const row = document.createElement("div");
+    row.className = "card-row";
+    row.textContent = `${(e.ts || "").replace("T", " ").slice(0, 19)} · ${e.type} · ${e.ok ? "ok" : e.error} · ${e.target || ""} ${e.detail || ""}`;
+    list.appendChild(row);
+  });
 }
 
 async function persist() {
@@ -535,6 +573,8 @@ document.getElementById("btnAiPerm").addEventListener("click", () => {
 
 async function init() {
   state = await VCA.loadAll();
+  state.autoState = state.autoState;
+  state.autoLog = state.autoLog;
   const tab = new URLSearchParams(location.search).get("tab");
   if (tab && TITLES[tab]) showTab(tab);
   renderAll();

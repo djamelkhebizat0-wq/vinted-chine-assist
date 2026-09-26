@@ -704,7 +704,8 @@
             <button type="button" class="vca-link" id="vca-open-cloud">Lire les limites</button>
           </div>
         </div>
-        <div class="vca-ft">Manuel · respectez les CGU Vinted · pas d’évasion de ban</div>
+        <div id="vca-auto-banner" class="vca-banner" hidden></div>
+        <div class="vca-ft">Manuel sauf Mode auto · respectez les CGU Vinted · pas d’évasion de ban</div>
       </div>
       <button type="button" id="vca-fab" title="Vinted Chine Assist" aria-expanded="false">V</button>
     `;
@@ -917,6 +918,18 @@
     });
 
     refreshAllPanels();
+    refreshAutoBanner();
+  }
+
+  function refreshAutoBanner() {
+    const el = root?.querySelector("#vca-auto-banner");
+    if (!el) return;
+    if (settings.modeAuto) {
+      el.hidden = false;
+      el.textContent = "Mode auto ON — envoi réel (caps / délai). STOP dans le popup.";
+    } else {
+      el.hidden = true;
+    }
   }
 
   function refreshProfilesSelect() {
@@ -938,6 +951,7 @@
     refreshScheduleUI();
     refreshItemTplUI();
     refreshProfilesSelect();
+    refreshAutoBanner();
     if (root?.querySelector("#vca-cost") && settings.costPrice) {
       root.querySelector("#vca-cost").value = String(settings.costPrice);
     }
@@ -987,8 +1001,9 @@
     if (area !== "local") return;
     loadState().then(() => {
       setVisible(settings.bubbleEnabled !== false);
-      refreshAllPanels();
-    });
+    refreshAllPanels();
+    refreshAutoBanner();
+  });
   });
 
   let observerTimer = null;
@@ -997,7 +1012,7 @@
     const obs = new MutationObserver(() => {
       clearTimeout(observerTimer);
       observerTimer = setTimeout(() => {
-        if (settings.autoReplyEnabled) maybeAutoFill();
+        if (settings.autoReplyEnabled && !settings.modeAuto) maybeAutoFill();
         const offer = detectBuyerOffer();
         const offerEl = root?.querySelector("#vca-offer");
         if (offer != null && offerEl && !offerEl.value) {
@@ -1015,6 +1030,19 @@
     setVisible(settings.bubbleEnabled !== false);
     watchInbox();
   }
+
+  VCA.page = {
+    insertText,
+    findChatInput,
+    insertInto,
+    detectContext,
+    detectBuyerOffer,
+    detectListedPrice,
+    currentVars,
+    pageKind,
+    textOf,
+    toast
+  };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);

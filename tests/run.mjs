@@ -9,6 +9,7 @@ ctx.globalThis = ctx;
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(root, "lib/shared.js"), "utf8"), ctx);
 vm.runInContext(fs.readFileSync(path.join(root, "lib/nego.js"), "utf8"), ctx);
+vm.runInContext(fs.readFileSync(path.join(root, "lib/guard.js"), "utf8"), ctx);
 const { VCA } = ctx;
 
 let failed = 0;
@@ -77,6 +78,36 @@ assert(migrated.nego.length >= 1, "migrate old reponsesRapides into nego");
 
 const settings = VCA.migrateSettings({ negotiationFloorPercent: 12, suggestCounterPercent: 6 });
 assert(settings.maxDropPercent === 12 && settings.counterStepPercent === 6, "migrate old % settings");
+assert(settings.modeAuto === false, "mode auto default off");
+
+const gOff = VCA.guardCheck({ modeAuto: false, autoMinDelaySeconds: 60, autoDailyMessageCap: 40 }, VCA.emptyAutoState(), "message", "c1");
+assert(gOff.ok === false && gOff.reason === "mode-off", "guard blocks when off");
+
+const gOk = VCA.guardCheck({ modeAuto: true, autoMinDelaySeconds: 60, autoDailyMessageCap: 40, autoDailyRepostCap: 20, autoConversationCooldownMinutes: 90 }, VCA.emptyAutoState(), "message", "c1");
+assert(gOk.ok === true, "guard allows first message");
+
+let st = VCA.guardRecord(gOk.state, "message", "c1");
+const gDelay = VCA.guardCheck({ modeAuto: true, autoMinDelaySeconds: 60, autoDailyMessageCap: 40, autoConversationCooldownMinutes: 90 }, st, "message", "c2");
+assert(gDelay.ok === false && gDelay.reason === "delay", "min delay between outbound");
+
+st.lastOutboundAt = Date.now() - 120000;
+const gCool = VCA.guardCheck({ modeAuto: true, autoMinDelaySeconds: 60, autoDailyMessageCap: 40, autoConversationCooldownMinutes: 90 }, st, "message", "c1");
+assert(gCool.ok === false && gCool.reason === "cooldown", "per-conversation cooldown");
+
+st.lastByConversation = {};
+st.messagesSent = 40;
+const gCap = VCA.guardCheck({ modeAuto: true, autoMinDelaySeconds: 60, autoDailyMessageCap: 40, autoConversationCooldownMinutes: 90 }, st, "message", "c9");
+assert(gCap.ok === false && gCap.reason === "cap-msg", "daily message cap");
+
+st.messagesSent = 0;
+st.repostsDone = 20;
+const gRep = VCA.guardCheck({ modeAuto: true, autoMinDelaySeconds: 60, autoDailyMessageCap: 40, autoDailyRepostCap: 20, autoConversationCooldownMinutes: 90 }, st, "repost", "");
+assert(gRep.ok === false && gRep.reason === "cap-repost", "daily repost cap");
+
+assert(VCA.offerBelowMinMargin(16, { costPrice: 12, minMarginEur: 5 }) === true, "below min margin");
+assert(VCA.offerBelowMinMargin(18, { costPrice: 12, minMarginEur: 5 }) === false, "at min margin");
+assert(VCA.templateReady({ text: "ok" }) === false, "short template rejected");
+assert(VCA.templateReady({ text: "Merci pour votre offre de {{offre}} € !" }) === true, "template ready");
 
 if (failed) {
   console.error(`\n${failed} failed`);

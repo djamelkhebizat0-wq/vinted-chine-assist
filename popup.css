@@ -102,6 +102,30 @@ h1 {
   border: 1px solid var(--border);
 }
 .btn.ghost:hover { background: #eef5f3; }
+.btn.danger { background: #c23b3b; color: #fff; }
+.btn.danger:hover { background: #a32f2f; }
+
+.card.auto strong { font-size: 13px; }
+.row.between { justify-content: space-between; }
+.caps { font-size: 11px; color: var(--muted); margin: 8px 0; line-height: 1.4; }
+.log {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  max-height: 92px;
+  overflow: auto;
+}
+.log li {
+  font-size: 10px;
+  color: var(--muted);
+  padding: 3px 0;
+  border-bottom: 1px solid #eef3f1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.log li.err { color: #c23b3b; }
+.log li.ok { color: var(--ok); }
 
 .ft { text-align: center; color: var(--muted); margin-top: 4px; }
 .ft small { font-size: 10px; }

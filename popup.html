@@ -11,9 +11,23 @@
     <div class="logo" aria-hidden="true"></div>
     <div>
       <h1>Vinted Chine Assist</h1>
-      <p class="sub">v1.1.0 · local · personnel</p>
+      <p class="sub">v1.2.0 · local · personnel</p>
     </div>
   </header>
+
+  <section class="card auto">
+    <div class="row between">
+      <strong>Mode auto</strong>
+      <span class="dot" id="autoDot"></span>
+    </div>
+    <p class="hint" id="autoHint">Désactivé par défaut. N’envoie rien tant que c’est OFF.</p>
+    <div class="caps" id="autoCaps">—</div>
+    <nav class="actions">
+      <button type="button" class="btn primary" id="btnModeAuto">Activer Mode auto</button>
+      <button type="button" class="btn danger" id="btnKill">STOP immédiat</button>
+    </nav>
+    <ul class="log" id="autoLog"></ul>
+  </section>
 
   <section class="card status">
     <div class="row">
@@ -48,9 +62,10 @@
   </nav>
 
   <footer class="ft">
-    <small>Pas de cloud 24/7 · pas d’app native · CGU Vinted</small>
+    <small>Chrome ouvert requis · pas de cloud 24/7 · CGU Vinted</small>
   </footer>
   <script src="lib/shared.js"></script>
+  <script src="lib/guard.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
