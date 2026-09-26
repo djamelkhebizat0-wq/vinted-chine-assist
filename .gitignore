@@ -1,0 +1,4 @@
+cloud/node_modules/
+cloud/data/
+cloud/.env
+cloud/*.tmp

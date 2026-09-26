@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bon de livraison — Vinted Chine Assist</title>
+  <style>
+    :root { font-family: "Segoe UI", system-ui, sans-serif; color: #142421; }
+    body { margin: 24px; }
+    h1 { font-size: 20px; }
+    .muted { color: #5a716c; font-size: 13px; }
+    .slip {
+      border: 1px solid #cfe0dc;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 12px 0;
+      page-break-inside: avoid;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid #e4eeeb; }
+    .actions { margin: 12px 0; display: flex; gap: 8px; flex-wrap: wrap; }
+    button, a.btn {
+      background: #099a8e; color: #fff; border: none; border-radius: 8px;
+      padding: 8px 12px; font-weight: 600; cursor: pointer; text-decoration: none; font-size: 13px;
+    }
+    a.ghost { background: #fff; color: #142421; border: 1px solid #cfe0dc; }
+    @media print {
+      .actions, .no-print { display: none !important; }
+      body { margin: 0; }
+    }
+    @media (max-width: 600px) { body { margin: 12px; } }
+  </style>
+</head>
+<body>
+  <h1>Bons de livraison / emballage</h1>
+  <p class="muted">Générés depuis le CRM local. Cochez la checklist d’emballage dans l’extension avant le dépôt.</p>
+  <div class="actions no-print">
+    <button type="button" id="btnPrint">Imprimer</button>
+    <a class="btn ghost" href="crm.html">Retour CRM</a>
+  </div>
+  <div id="slips"></div>
+  <script src="lib/shared.js"></script>
+  <script src="packing-slip.js"></script>
+</body>
+</html>

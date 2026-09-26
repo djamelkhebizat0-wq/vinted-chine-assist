@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vinted Chine Assist</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="hdr">
+    <div class="logo" aria-hidden="true"></div>
+    <div>
+      <h1>Vinted Chine Assist</h1>
+      <p class="sub">v1.3.0 · local + cloud proto</p>
+    </div>
+  </header>
+
+  <section class="card auto">
+    <div class="row between">
+      <strong>Mode auto</strong>
+      <span class="dot" id="autoDot"></span>
+    </div>
+    <p class="hint" id="autoHint">Désactivé par défaut. N’envoie rien tant que c’est OFF.</p>
+    <div class="caps" id="autoCaps">—</div>
+    <nav class="actions">
+      <button type="button" class="btn primary" id="btnModeAuto">Activer Mode auto</button>
+      <button type="button" class="btn danger" id="btnKill">STOP immédiat</button>
+    </nav>
+    <ul class="log" id="autoLog"></ul>
+  </section>
+
+  <section class="card cloud">
+    <div class="row between">
+      <strong>Cloud 24/7</strong>
+      <span class="dot" id="cloudDot"></span>
+    </div>
+    <p class="hint" id="cloudHint">Déconnecté — tester dans Paramètres.</p>
+    <nav class="actions">
+      <button type="button" class="btn ghost" id="btnCloud">Cloud…</button>
+    </nav>
+  </section>
+
+  <section class="card status">
+    <div class="row">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Vérification…</span>
+    </div>
+    <p class="hint" id="pageHint">Ouvrez une page Vinted pour utiliser la bulle.</p>
+  </section>
+
+  <section class="card stats">
+    <div class="stat">
+      <span class="num" id="caMonth">—</span>
+      <span class="lbl">CA mois</span>
+    </div>
+    <div class="stat">
+      <span class="num" id="stock">—</span>
+      <span class="lbl">Stock</span>
+    </div>
+    <div class="stat">
+      <span class="num" id="queue">—</span>
+      <span class="lbl">File repost</span>
+    </div>
+  </section>
+
+  <nav class="actions">
+    <button type="button" class="btn primary" id="btnOptions">Paramètres</button>
+    <button type="button" class="btn ghost" id="btnCrm">CRM</button>
+  </nav>
+  <nav class="actions">
+    <button type="button" class="btn ghost" id="btnToggleBubble">Bulle : on</button>
+    <button type="button" class="btn ghost" id="btnRepostNext">Repost suivant</button>
+  </nav>
+
+  <footer class="ft">
+    <small>Cloud XOR local · pas d’API officielle · CGU / risque de ban</small>
+  </footer>
+  <script src="lib/shared.js"></script>
+  <script src="lib/guard.js"></script>
+  <script src="lib/cloud.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

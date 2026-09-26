@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paramètres — Vinted Chine Assist</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="nav">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Vinted Chine Assist</h1>
+          <p>v1.3.0 · local + cloud proto · personnel</p>
+        </div>
+      </div>
+      <nav>
+        <button type="button" class="nav-btn active" data-tab="dash">Tableau de bord</button>
+        <button type="button" class="nav-btn" data-tab="auto">Mode auto</button>
+        <button type="button" class="nav-btn" data-tab="crm">CRM vendeur</button>
+        <button type="button" class="nav-btn" data-tab="nego">Négo auto</button>
+        <button type="button" class="nav-btn" data-tab="msg">Messages</button>
+        <button type="button" class="nav-btn" data-tab="items">Templates articles</button>
+        <button type="button" class="nav-btn" data-tab="repost">Repost</button>
+        <button type="button" class="nav-btn" data-tab="colis">Étiquettes &amp; colis</button>
+        <button type="button" class="nav-btn" data-tab="sav">Post-vente</button>
+        <button type="button" class="nav-btn" data-tab="planif">Comptes &amp; planif</button>
+        <button type="button" class="nav-btn" data-tab="cloud">Cloud &amp; mobile</button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="top">
+        <h2 id="pageTitle">Tableau de bord</h2>
+        <div class="top-actions">
+          <button type="button" class="btn ghost" id="btnReset">Réinitialiser modèles</button>
+          <button type="button" class="btn primary" id="btnSave">Enregistrer</button>
+        </div>
+      </header>
+      <div id="toast" class="toast" hidden></div>
+
+      <section class="panel tab active" data-tab="dash">
+        <p class="desc">Chiffre d’affaires du mois, marge nette et stock — calculés localement à partir du CRM.</p>
+        <div class="kpis" id="kpis"></div>
+        <p class="desc">Profil actif : <strong id="dashProfile">—</strong></p>
+      </section>
+
+      <section class="panel tab" data-tab="crm">
+        <div class="panel-hd">
+          <h3>Stock &amp; ventes</h3>
+          <div class="row-actions">
+            <button type="button" class="btn sm" id="btnCrmAdd">+ Article</button>
+            <button type="button" class="btn sm" id="btnCrmExport">Export CSV</button>
+            <label class="btn sm file-btn">Import CSV<input type="file" id="crmImport" accept=".csv,text/csv" hidden /></label>
+          </div>
+        </div>
+        <p class="desc">Frais estimés = % vente + forfait (réglages négo / CRM). Marge nette = vente − achat − frais − port.</p>
+        <div class="table-wrap">
+          <table class="grid" id="crmTable">
+            <thead>
+              <tr>
+                <th>Titre</th>
+                <th>URL</th>
+                <th>Achat €</th>
+                <th>Vente €</th>
+                <th>Frais €</th>
+                <th>Port €</th>
+                <th>Statut</th>
+                <th>Marge</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel tab" data-tab="auto">
+        <div class="banner">
+          <h3>Mode auto (Chrome ouvert uniquement)</h3>
+          <p>Par défaut <strong>OFF</strong>. Une fois activé (popup ou ici), l’extension <strong>envoie</strong> les réponses négo, exécute le repost en file, et envoie le post-vente — dans les plafonds. STOP immédiat = tout couper.</p>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="modeAuto" />
+          <span>Activer le Mode auto (envoi réel)</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="autoNegoSend" checked />
+          <span>Négo : envoyer la réponse (sinon brouillon seulement)</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="autoRepostDo" checked />
+          <span>Repost : enregistrer / republier sans confirmation</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="autoPostSaleSend" checked />
+          <span>Post-vente : envoyer merci / avis automatiquement</span>
+        </label>
+        <div class="grid2 mt">
+          <label class="field"><span>Délai mini entre envois (secondes)</span>
+            <input type="number" id="autoMinDelaySeconds" min="15" max="600" step="5" />
+          </label>
+          <label class="field"><span>Plafond messages / jour</span>
+            <input type="number" id="autoDailyMessageCap" min="1" max="200" step="1" />
+          </label>
+          <label class="field"><span>Plafond reposts / jour</span>
+            <input type="number" id="autoDailyRepostCap" min="1" max="100" step="1" />
+          </label>
+          <label class="field"><span>Cooldown par conversation (min)</span>
+            <input type="number" id="autoConversationCooldownMinutes" min="5" max="1440" step="5" />
+          </label>
+        </div>
+        <p class="desc">Jamais d’achat auto. Jamais d’acceptation d’offre sous achat + marge mini. Rien n’est envoyé si le modèle est vide. Journal ci-dessous.</p>
+        <p class="desc warn-text">Si le <strong>Cloud</strong> est activé, le Mode auto local n’envoie plus (XOR : évite les doubles messages). Préférez l’un ou l’autre.</p>
+        <div id="autoStatusBox" class="desc"></div>
+        <div id="autoLogBox" class="list"></div>
+      </section>
+
+      <section class="panel tab" data-tab="nego">
+        <h3>Règles locales (sans API Vinted)</h3>
+        <p class="desc">Refus sous le plancher, contre-offre par paliers %, acceptation si l’offre ≥ objectif (achat + marge mini, sinon prix − palier).</p>
+        <div class="grid2">
+          <label class="field"><span>Prix d'achat par défaut (€)</span>
+            <input type="number" id="costPrice" min="0" step="0.01" />
+          </label>
+          <label class="field"><span>Marge mini (€)</span>
+            <input type="number" id="minMarginEur" min="0" step="0.5" />
+          </label>
+          <label class="field"><span>Prix plancher (€)</span>
+            <input type="number" id="floorPrice" min="0" step="0.5" />
+            <small>Minimum absolu, même si l’IA suggère moins.</small>
+          </label>
+          <label class="field"><span>% max de baisse vs prix affiché</span>
+            <input type="number" id="maxDropPercent" min="0" max="90" step="1" />
+          </label>
+          <label class="field"><span>Palier de contre-offre (%)</span>
+            <input type="number" id="counterStepPercent" min="0" max="50" step="1" />
+          </label>
+          <label class="field"><span>Frais vendeur estimés (%)</span>
+            <input type="number" id="feePercent" min="0" max="30" step="0.1" />
+          </label>
+          <label class="field"><span>Frais forfait (€)</span>
+            <input type="number" id="feeFixed" min="0" step="0.01" />
+          </label>
+          <label class="field"><span>Port par défaut (€)</span>
+            <input type="number" id="defaultShippingCost" min="0" step="0.01" />
+          </label>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="autoReplyEnabled" />
+          <span>Pré-remplir automatiquement la contre-offre dans le champ message (n’envoie jamais)</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="bubbleEnabled" checked />
+          <span>Afficher la bulle flottante sur Vinted</span>
+        </label>
+        <h3 class="mt">Clé API optionnelle (OpenAI-compatible)</h3>
+        <p class="desc">Si vide, uniquement le moteur de règles. La clé reste dans <code>chrome.storage.local</code>. Autorisez l’hôte HTTPS au premier appel.</p>
+        <div class="grid2">
+          <label class="field"><span>Clé API</span>
+            <input type="password" id="openaiApiKey" autocomplete="off" placeholder="sk-… (optionnel)" />
+          </label>
+          <label class="field"><span>Base URL</span>
+            <input type="url" id="openaiBaseUrl" placeholder="https://api.openai.com/v1" />
+          </label>
+          <label class="field"><span>Modèle</span>
+            <input type="text" id="openaiModel" placeholder="gpt-4o-mini" />
+          </label>
+        </div>
+        <button type="button" class="btn sm" id="btnAiPerm">Autoriser les appels HTTPS (IA)</button>
+      </section>
+
+      <section class="panel tab" data-tab="msg">
+        <p class="desc">Catégories : favoris, négo, post-vente, relance. Variables <code>{{prix}}</code> <code>{{nom}}</code> <code>{{article}}</code> <code>{{contre}}</code> <code>{{offre}}</code> <code>{{plancher}}</code>.</p>
+        <div id="msgCats"></div>
+      </section>
+
+      <section class="panel tab" data-tab="items">
+        <div class="panel-hd">
+          <h3>Modèles titre / description / prix</h3>
+          <button type="button" class="btn sm" id="btnItemAdd">+ Modèle</button>
+        </div>
+        <p class="desc">Formule de prix : <code>achat + marge</code>, <code>achat * 1.35</code>. Sur <code>/items/new</code>, la bulle tente de remplir les champs.</p>
+        <div id="itemTplList"></div>
+      </section>
+
+      <section class="panel tab" data-tab="repost">
+        <h3>File de republication</h3>
+        <p class="desc">Une alarme Chrome notifie le prochain article. Minimum 15 min. Pas d’ouverture en boucle infinie. Chrome doit rester ouvert.</p>
+        <div class="grid2">
+          <label class="field"><span>Intervalle (minutes)</span>
+            <input type="number" id="repostIntervalMinutes" min="15" step="5" />
+          </label>
+          <label class="check top-check">
+            <input type="checkbox" id="repostAutoOpen" />
+            <span>Ouvrir automatiquement l’onglet (sinon notification seule)</span>
+          </label>
+        </div>
+        <div id="repostList" class="list"></div>
+      </section>
+
+      <section class="panel tab" data-tab="colis">
+        <h3>File d’étiquettes</h3>
+        <p class="desc">Collectez les liens depuis la page commandes Vinted via la bulle. Ouverture limitée à 5 onglets avec pause.</p>
+        <div id="ordersList" class="list"></div>
+        <h3 class="mt">Checklist emballage</h3>
+        <div id="packingList" class="list"></div>
+        <p><a href="packing-slip.html" target="_blank" rel="noopener">Ouvrir le bon de livraison</a></p>
+      </section>
+
+      <section class="panel tab" data-tab="sav">
+        <h3>Rappels post-vente</h3>
+        <p class="desc">Après « marquer vendu » dans le CRM, un rappel remerciement puis avis est planifié (alarmes locales).</p>
+        <div class="grid2">
+          <label class="field"><span>Délai remerciement (heures)</span>
+            <input type="number" id="postSaleThankYouHours" min="0" step="1" />
+          </label>
+          <label class="field"><span>Délai demande d’avis (heures)</span>
+            <input type="number" id="postSaleReviewHours" min="1" step="1" />
+          </label>
+        </div>
+        <div id="savList" class="list"></div>
+      </section>
+
+      <section class="panel tab" data-tab="planif">
+        <h3>Profils locaux</h3>
+        <p class="desc warn-text">Une extension ne peut pas isoler les cookies Vinted. Pour deux comptes, utilisez deux profils Chrome. Ici, le « profil » ne fait que étiqueter vos données locales.</p>
+        <div id="profilesList" class="list"></div>
+        <button type="button" class="btn sm" id="btnProfileAdd">+ Profil local</button>
+        <h3 class="mt">Planification (URL + date)</h3>
+        <div class="grid2">
+          <label class="field"><span>Titre</span><input type="text" id="schedTitle" placeholder="Repost robe" /></label>
+          <label class="field"><span>URL</span><input type="url" id="schedUrl" placeholder="https://www.vinted.fr/items/…" /></label>
+          <label class="field"><span>Quand</span><input type="datetime-local" id="schedWhen" /></label>
+        </div>
+        <button type="button" class="btn sm" id="btnSchedAdd">Ajouter un rappel</button>
+        <div id="schedList" class="list mt"></div>
+      </section>
+
+      <section class="panel tab" data-tab="cloud">
+        <div class="banner">
+          <h3>Prototype Cloud 24/7 (opt-in)</h3>
+          <p>Un petit serveur dans <code>cloud/</code> peut tourner sur un VPS. Ce n’est <strong>pas</strong> une API officielle Vinted. Automatiser un compte peut violer les CGU et valoir un <strong>ban</strong>. Le statut n’est <strong>jamais vert</strong> si <code>/health</code> échoue.</p>
+        </div>
+        <div class="grid2">
+          <label class="field"><span>URL du worker</span>
+            <input type="url" id="cloudUrl" placeholder="http://127.0.0.1:8787" autocomplete="off" />
+          </label>
+          <label class="field"><span>Jeton API (pas le mot de passe Vinted)</span>
+            <input type="password" id="cloudToken" autocomplete="off" placeholder="API_TOKEN du .env" />
+          </label>
+        </div>
+        <div class="row-actions">
+          <button type="button" class="btn sm" id="btnCloudTest">Connecter / Tester</button>
+          <button type="button" class="btn sm" id="btnCloudSyncRules">Synchroniser les règles</button>
+          <button type="button" class="btn sm" id="btnCloudSyncSession">Synchroniser la session</button>
+          <button type="button" class="btn sm" id="btnCloudDry">Dry-run inbox</button>
+          <button type="button" class="btn danger" id="btnCloudKill">STOP distant</button>
+        </div>
+        <label class="check mt">
+          <input type="checkbox" id="cloudEnabled" />
+          <span>Activer le worker cloud (coupe le Mode auto local pour éviter les doubles envois)</span>
+        </label>
+        <p class="desc" id="cloudStatusLine"><span class="cloud-pill disconnected" id="cloudPill">Déconnecté</span> <span id="cloudStatusDetail">Aucune vérification pour l’instant.</span></p>
+        <div id="cloudRemoteBox" class="desc"></div>
+        <div id="cloudLogBox" class="list"></div>
+        <p class="desc">Session = cookies Vinted de <em>ce</em> Chrome, chiffrés sur le serveur. Si Vinted invalide les cookies, rouvrez Chrome quelques secondes et cliquez « Synchroniser la session ». <strong>Ne collez jamais le mot de passe Vinted</strong> ici.</p>
+        <div class="banner">
+          <h3>Toujours pas d’app native iOS / Android</h3>
+          <p>Pas d’isolation multi-comptes côté serveur, pas de webhooks d’impression. Voir <a href="docs/ARCHITECTURE-CLOUD.md" target="_blank" rel="noopener">ARCHITECTURE-CLOUD.md</a>.</p>
+        </div>
+      </section>
+
+      <section class="panel warn">
+        <h3>Avertissement</h3>
+        <p>Outil d’aide à la rédaction et au suivi personnel. Pas de spam, pas de multi-comptes automatisés, pas de contournement de ban. Respectez les CGU Vinted.</p>
+      </section>
+    </main>
+  </div>
+  <script src="lib/shared.js"></script>
+  <script src="lib/nego.js"></script>
+  <script src="lib/guard.js"></script>
+  <script src="lib/cloud.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

@@ -39,8 +39,8 @@
 
 #vca-panel {
   display: none;
-  width: 340px !important;
-  max-height: min(72vh, 560px) !important;
+  width: 360px !important;
+  max-height: min(78vh, 640px) !important;
   overflow: auto !important;
   margin-bottom: 12px !important;
   background: #fff !important;
@@ -78,6 +78,7 @@
 
 .vca-tabs {
   display: flex !important;
+  flex-wrap: wrap !important;
   gap: 4px !important;
   padding: 8px 10px !important;
   background: #f4f9f8 !important;
@@ -88,12 +89,13 @@
 }
 
 .vca-tab {
-  flex: 1 !important;
+  flex: 1 1 20% !important;
+  min-width: 64px !important;
   border: none !important;
   background: transparent !important;
-  padding: 8px 6px !important;
+  padding: 7px 4px !important;
   border-radius: 8px !important;
-  font-size: 11px !important;
+  font-size: 10px !important;
   font-weight: 600 !important;
   color: #5a716c !important;
   cursor: pointer !important;
@@ -116,6 +118,30 @@
   letter-spacing: 0.05em !important;
   color: #7a908b !important;
   margin: 8px 2px 6px !important;
+}
+
+.vca-cats {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+  margin-bottom: 6px !important;
+}
+
+.vca-cat {
+  border: 1px solid #d7e5e2 !important;
+  background: #fff !important;
+  border-radius: 999px !important;
+  padding: 4px 8px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #5a716c !important;
+  cursor: pointer !important;
+}
+
+.vca-cat.active {
+  background: #099a8e !important;
+  border-color: #099a8e !important;
+  color: #fff !important;
 }
 
 .vca-btn {
@@ -161,7 +187,7 @@
   margin-bottom: 8px !important;
 }
 
-.vca-nego label {
+.vca-nego label, .vca-field {
   display: block !important;
   font-size: 11px !important;
   font-weight: 600 !important;
@@ -169,7 +195,7 @@
   margin-bottom: 4px !important;
 }
 
-.vca-nego input {
+.vca-nego input, .vca-field input, #vca-root select {
   width: 100% !important;
   padding: 8px 10px !important;
   border: 1px solid #cfe0dc !important;
@@ -193,6 +219,16 @@
 
 .vca-result.ok { border-color: #1a9f6e !important; background: #f0faf5 !important; }
 .vca-result.warn { border-color: #c9891a !important; background: #fffaf0 !important; }
+.vca-result.bad { border-color: #c23b3b !important; background: #fdf4f4 !important; }
+
+.vca-preview {
+  margin-top: 8px !important;
+  font-size: 11px !important;
+  color: #5a716c !important;
+  white-space: pre-wrap !important;
+  max-height: 72px !important;
+  overflow: auto !important;
+}
 
 .vca-check {
   list-style: none !important;
@@ -260,4 +296,83 @@
   border: none !important;
   padding: 0 !important;
   text-decoration: underline !important;
+}
+
+.vca-hint, .vca-empty {
+  font-size: 11px !important;
+  color: #7a908b !important;
+  margin: 4px 0 8px !important;
+  line-height: 1.4 !important;
+}
+
+.vca-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  font-size: 12px !important;
+  padding: 6px 8px !important;
+  border: 1px solid #e4eeeb !important;
+  border-radius: 8px !important;
+  margin-bottom: 4px !important;
+  background: #f9fcfb !important;
+}
+
+.vca-row span {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.vca-mini {
+  border: none !important;
+  background: #fdeeee !important;
+  color: #c23b3b !important;
+  border-radius: 6px !important;
+  width: 22px !important;
+  height: 22px !important;
+  cursor: pointer !important;
+  font-weight: 700 !important;
+}
+
+.vca-stats {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
+  margin-bottom: 10px !important;
+}
+
+.vca-stats div {
+  background: #f0faf8 !important;
+  border: 1px solid #c5e6e1 !important;
+  border-radius: 10px !important;
+  padding: 8px !important;
+  text-align: center !important;
+}
+
+.vca-stats b {
+  display: block !important;
+  font-size: 14px !important;
+  color: #099a8e !important;
+}
+
+.vca-stats span {
+  font-size: 10px !important;
+  color: #5a716c !important;
+}
+
+.vca-banner {
+  background: #fffaf3 !important;
+  border: 1px solid #f0d9a8 !important;
+  border-radius: 12px !important;
+  padding: 12px !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+}
+
+.vca-banner strong { display: block !important; margin-bottom: 4px !important; }
+.vca-banner p { margin: 0 !important; color: #5a716c !important; }
+
+@media (max-width: 420px) {
+  #vca-panel { width: min(94vw, 360px) !important; }
 }
