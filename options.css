@@ -223,6 +223,18 @@ body {
 }
 .toast.ok { background: var(--teal); }
 
+.cloud-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-right: 8px;
+}
+.cloud-pill.connected { background: #d8f5ea; color: #0b7a4b; }
+.cloud-pill.disconnected { background: #eee8dc; color: #8a5a12; }
+.cloud-pill.error { background: #fdeeee; color: #c23b3b; }
+
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
   .nav { height: auto; position: relative; }

@@ -68,6 +68,7 @@ h1 {
 }
 .dot.on { background: var(--ok); box-shadow: 0 0 0 3px rgba(26, 159, 110, 0.2); }
 .dot.off { background: var(--warn); box-shadow: 0 0 0 3px rgba(201, 137, 26, 0.2); }
+.dot.err { background: #c23b3b; box-shadow: 0 0 0 3px rgba(194, 59, 59, 0.2); }
 
 .hint { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
 

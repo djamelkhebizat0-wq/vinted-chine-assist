@@ -1,0 +1,27 @@
+# Déploiement primaire documenté : Fly.io
+# 1. fly auth login && fly launch --no-deploy --copy-config
+# 2. fly secrets set API_TOKEN=... ENCRYPTION_KEY=...
+# 3. fly deploy
+
+app = "vinted-chine-assist-cloud"
+primary_region = "cdg"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8787"
+  POLL_SECONDS = "45"
+  VINTED_ORIGIN = "https://www.vinted.fr"
+  DATA_DIR = "/data"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[mounts]]
+  source = "vca_data"
+  destination = "/data"

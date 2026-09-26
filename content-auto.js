@@ -190,6 +190,7 @@
       return { skipped: "inbox-list", unread: hrefs };
     }
     const settings = (await VCA.loadAll()).settings;
+    if (settings.cloudEnabled) return { skipped: "cloud" };
     if (!settings.modeAuto || !settings.autoNegoSend) return { skipped: "nego-off" };
 
     const offer = p.detectBuyerOffer ? p.detectBuyerOffer() : null;
@@ -276,6 +277,7 @@
 
   async function autoPostSaleSend(kind) {
     const settings = (await VCA.loadAll()).settings;
+    if (settings.cloudEnabled) return { skipped: "cloud" };
     if (!settings.modeAuto || !settings.autoPostSaleSend) return { skipped: "sav-off" };
     const all = await VCA.loadAll();
     const want = kind === "avis" ? "sav-avis" : "sav-merci";
@@ -307,6 +309,7 @@
 
   async function autoRepostHere() {
     const settings = (await VCA.loadAll()).settings;
+    if (settings.cloudEnabled) return { skipped: "cloud" };
     if (!settings.modeAuto || !settings.autoRepostDo) return { skipped: "repost-off" };
     const p = page();
     const kind = p.pageKind ? p.pageKind() : "";
@@ -347,6 +350,7 @@
   async function runTick() {
     if (abortAuto || tickBusy) return { skipped: "busy" };
     const settings = (await VCA.loadAll()).settings;
+    if (settings.cloudEnabled) return { skipped: "cloud" };
     if (!settings.modeAuto) return { skipped: "off" };
     tickBusy = true;
     try {
@@ -370,7 +374,7 @@
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local" || !changes[VCA.KEYS.settings]) return;
-    abortAuto = !changes[VCA.KEYS.settings].newValue?.modeAuto;
+    abortAuto = !VCA.localAutoActive(changes[VCA.KEYS.settings].newValue);
   });
 
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -411,7 +415,7 @@
       clearTimeout(t);
       t = setTimeout(() => {
         VCA.loadAll().then((all) => {
-          if (all.settings.modeAuto) runTick();
+          if (VCA.localAutoActive(all.settings)) runTick();
         });
       }, 1200);
     });

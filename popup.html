@@ -11,7 +11,7 @@
     <div class="logo" aria-hidden="true"></div>
     <div>
       <h1>Vinted Chine Assist</h1>
-      <p class="sub">v1.2.0 · local · personnel</p>
+      <p class="sub">v1.3.0 · local + cloud proto</p>
     </div>
   </header>
 
@@ -27,6 +27,17 @@
       <button type="button" class="btn danger" id="btnKill">STOP immédiat</button>
     </nav>
     <ul class="log" id="autoLog"></ul>
+  </section>
+
+  <section class="card cloud">
+    <div class="row between">
+      <strong>Cloud 24/7</strong>
+      <span class="dot" id="cloudDot"></span>
+    </div>
+    <p class="hint" id="cloudHint">Déconnecté — tester dans Paramètres.</p>
+    <nav class="actions">
+      <button type="button" class="btn ghost" id="btnCloud">Cloud…</button>
+    </nav>
   </section>
 
   <section class="card status">
@@ -62,10 +73,11 @@
   </nav>
 
   <footer class="ft">
-    <small>Chrome ouvert requis · pas de cloud 24/7 · CGU Vinted</small>
+    <small>Cloud XOR local · pas d’API officielle · CGU / risque de ban</small>
   </footer>
   <script src="lib/shared.js"></script>
   <script src="lib/guard.js"></script>
+  <script src="lib/cloud.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

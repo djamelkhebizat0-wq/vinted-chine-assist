@@ -67,6 +67,9 @@ function readSettingsFromForm() {
   s.postSaleThankYouHours = Math.max(0, num("postSaleThankYouHours") || 0);
   s.postSaleReviewHours = Math.max(1, num("postSaleReviewHours") || 48);
   s.activeProfileId = state.activeProfileId;
+  s.cloudUrl = (document.getElementById("cloudUrl")?.value || "").trim().replace(/\/$/, "");
+  s.cloudToken = (document.getElementById("cloudToken")?.value || "").trim();
+  s.cloudEnabled = !!(document.getElementById("cloudEnabled")?.checked);
 }
 
 function fillSettingsForm() {
@@ -100,6 +103,10 @@ function fillSettingsForm() {
   document.getElementById("repostAutoOpen").checked = !!s.repostAutoOpen;
   set("postSaleThankYouHours", s.postSaleThankYouHours);
   set("postSaleReviewHours", s.postSaleReviewHours);
+  set("cloudUrl", s.cloudUrl || "");
+  set("cloudToken", s.cloudToken || "");
+  const cloudEn = document.getElementById("cloudEnabled");
+  if (cloudEn) cloudEn.checked = !!s.cloudEnabled;
 }
 
 function renderKpis() {
@@ -422,6 +429,91 @@ function renderAll() {
   renderProfiles();
   renderSched();
   renderAutoLog();
+  renderCloudPanel({ skipFetch: true });
+}
+
+function setCloudPill(kind, label, detail) {
+  const pill = document.getElementById("cloudPill");
+  const line = document.getElementById("cloudStatusDetail");
+  if (pill) {
+    pill.className = "cloud-pill " + kind;
+    pill.textContent = label;
+  }
+  if (line) line.textContent = detail || "";
+}
+
+function renderCloudLog(log) {
+  const box = document.getElementById("cloudLogBox");
+  if (!box) return;
+  if (!log?.length) {
+    box.innerHTML = '<p class="desc">Journal cloud vide (ou non récupéré).</p>';
+    return;
+  }
+  box.innerHTML = "";
+  log.slice(0, 12).forEach((e) => {
+    const row = document.createElement("div");
+    row.className = "card-row";
+    row.textContent = `${(e.ts || "").replace("T", " ").slice(0, 19)} · ${e.type} · ${e.ok ? "ok" : e.error} · ${e.target || ""} ${e.detail || ""}`;
+    box.appendChild(row);
+  });
+}
+
+async function ensureCloudHost(url) {
+  const pattern = VCA.cloudOriginPattern(url);
+  if (!pattern) return true;
+  if (!VCA.cloudNeedsOptionalHost(url)) return true;
+  return new Promise((resolve) => {
+    chrome.permissions.request({ origins: [pattern] }, (granted) => resolve(!!granted));
+  });
+}
+
+async function cloudCreds() {
+  readSettingsFromForm();
+  return { url: state.settings.cloudUrl, token: state.settings.cloudToken };
+}
+
+async function renderCloudPanel(opts) {
+  const box = document.getElementById("cloudRemoteBox");
+  if (!box) return;
+  const url = (document.getElementById("cloudUrl")?.value || state.settings.cloudUrl || "").trim();
+  if (!url) {
+    setCloudPill("disconnected", "Déconnecté", "Saisissez l’URL du worker puis Tester.");
+    box.textContent = "";
+    renderCloudLog([]);
+    return;
+  }
+  if (opts?.skipFetch) {
+    setCloudPill("disconnected", "Déconnecté", "Cliquez « Connecter / Tester » — aucun statut vert sans health.");
+    return;
+  }
+  setCloudPill("disconnected", "Vérification…", "Appel /health…");
+  const health = await VCA.cloudHealth(url);
+  if (!health.ok) {
+    setCloudPill(health.status === "error" ? "error" : "disconnected",
+      health.status === "error" ? "Erreur" : "Déconnecté",
+      health.error);
+    box.textContent = "";
+    renderCloudLog([]);
+    return;
+  }
+  setCloudPill("connected", "Connecté", `Worker ${health.data?.version || ""} — /health ok`);
+  const { token } = await cloudCreds();
+  const st = await VCA.cloudRequest(url, token, "/api/status");
+  if (!st.ok) {
+    setCloudPill("error", "Erreur", st.error || "Jeton ou /api/status");
+    return;
+  }
+  const d = st.data;
+  box.textContent = `Worker ${d.enabled ? "ON" : "OFF"}${d.killed ? " · STOP" : ""} · messages ${d.caps?.messagesSent || 0}/${d.caps?.autoDailyMessageCap || 40} · reposts ${d.caps?.repostsDone || 0}/${d.caps?.autoDailyRepostCap || 20} · session ${d.hasSession ? "oui (" + (d.session?.uploadedAt || "") + ")" : "non"} · tick ${d.lastTick || "—"}${d.lastError ? " · " + d.lastError : ""}`;
+  renderCloudLog(d.log);
+}
+
+async function persistCloudSettings() {
+  readSettingsFromForm();
+  if (state.settings.cloudEnabled) state.settings.modeAuto = false;
+  await VCA.storageSet({ [VCA.KEYS.settings]: state.settings });
+  const ma = document.getElementById("modeAuto");
+  if (ma && state.settings.cloudEnabled) ma.checked = false;
 }
 
 function renderAutoLog() {
@@ -446,6 +538,7 @@ function renderAutoLog() {
 
 async function persist() {
   readSettingsFromForm();
+  if (state.settings.cloudEnabled) state.settings.modeAuto = false;
   await VCA.storageSet({
     [VCA.KEYS.settings]: state.settings,
     [VCA.KEYS.templates]: state.templates,
@@ -571,6 +664,125 @@ document.getElementById("btnAiPerm").addEventListener("click", () => {
   });
 });
 
+document.getElementById("btnCloudTest")?.addEventListener("click", async () => {
+  const { url } = await cloudCreds();
+  if (!url) {
+    showToast("URL cloud requise", false);
+    return;
+  }
+  const hostOk = await ensureCloudHost(url);
+  if (!hostOk) {
+    setCloudPill("error", "Erreur", "Permission hôte refusée");
+    showToast("Autorisez l’hôte du worker", false);
+    return;
+  }
+  await persistCloudSettings();
+  await renderCloudPanel();
+});
+
+document.getElementById("btnCloudSyncRules")?.addEventListener("click", async () => {
+  await persist();
+  const { url, token } = await cloudCreds();
+  const hostOk = await ensureCloudHost(url);
+  if (!hostOk) {
+    showToast("Permission hôte refusée", false);
+    return;
+  }
+  const res = await VCA.cloudRequest(url, token, "/api/config", {
+    method: "POST",
+    body: {
+      settings: state.settings,
+      templates: state.templates,
+      repost: state.repost,
+      postsale: state.postsale
+    }
+  });
+  showToast(res.ok ? "Règles envoyées" : (res.error || "Échec sync"), !!res.ok);
+  if (res.ok) await renderCloudPanel();
+});
+
+document.getElementById("btnCloudSyncSession")?.addEventListener("click", async () => {
+  const { url, token } = await cloudCreds();
+  const hostOk = await ensureCloudHost(url);
+  if (!hostOk) {
+    showToast("Permission hôte refusée", false);
+    return;
+  }
+  const cookies = await VCA.collectVintedCookies();
+  if (!cookies.length) {
+    showToast("Aucun cookie Vinted — ouvrez vinted.fr connecté", false);
+    return;
+  }
+  const origin = cookies.some((c) => /vinted\.com$/.test(c.domain || ""))
+    ? "https://www.vinted.com"
+    : "https://www.vinted.fr";
+  const res = await VCA.cloudRequest(url, token, "/api/session", {
+    method: "POST",
+    body: { cookies, origin, userAgent: navigator.userAgent }
+  });
+  showToast(res.ok ? `${cookies.length} cookies chiffrés sur le worker` : (res.error || "Échec session"), !!res.ok);
+  if (res.ok) await renderCloudPanel();
+});
+
+document.getElementById("btnCloudDry")?.addEventListener("click", async () => {
+  const { url, token } = await cloudCreds();
+  const res = await VCA.cloudRequest(url, token, "/api/dry-run", {
+    method: "POST",
+    body: { listPrice: 40, offer: 32, conversationId: "sim-inbox", article: "Robe test", nom: "Ada" }
+  });
+  showToast(res.ok ? `Dry-run ${res.data?.preview?.action || "ok"}` : (res.error || "Échec"), !!res.ok);
+  if (res.ok) await renderCloudPanel();
+});
+
+document.getElementById("btnCloudKill")?.addEventListener("click", async () => {
+  const { url, token } = await cloudCreds();
+  const res = await VCA.cloudRequest(url, token, "/api/kill", { method: "POST", body: {} });
+  if (res.ok) {
+    state.settings.cloudEnabled = false;
+    const el = document.getElementById("cloudEnabled");
+    if (el) el.checked = false;
+    await persistCloudSettings();
+  }
+  showToast(res.ok ? "STOP distant envoyé" : (res.error || "Échec"), !!res.ok);
+  if (res.ok) await renderCloudPanel();
+});
+
+document.getElementById("cloudEnabled")?.addEventListener("change", async (ev) => {
+  const on = ev.target.checked;
+  if (on) {
+    const { url, token } = await cloudCreds();
+    const hostOk = await ensureCloudHost(url);
+    const health = hostOk ? await VCA.cloudHealth(url) : { ok: false, error: "hôte refusé" };
+    if (!health.ok) {
+      ev.target.checked = false;
+      setCloudPill(health.status === "error" ? "error" : "disconnected",
+        health.status === "error" ? "Erreur" : "Déconnecté",
+        health.error);
+      showToast("Worker injoignable — pas d’activation", false);
+      return;
+    }
+    const en = await VCA.cloudRequest(url, token, "/api/enable", { method: "POST", body: { enabled: true } });
+    if (!en.ok) {
+      ev.target.checked = false;
+      setCloudPill("error", "Erreur", en.error);
+      showToast(en.error || "Activation refusée", false);
+      return;
+    }
+    state.settings.cloudEnabled = true;
+    state.settings.modeAuto = false;
+    showToast("Cloud ON — Mode auto local coupé");
+  } else {
+    const { url, token } = await cloudCreds();
+    if (url && token) {
+      await VCA.cloudRequest(url, token, "/api/enable", { method: "POST", body: { enabled: false } });
+    }
+    state.settings.cloudEnabled = false;
+    showToast("Cloud OFF");
+  }
+  await persistCloudSettings();
+  await renderCloudPanel();
+});
+
 async function init() {
   state = await VCA.loadAll();
   state.autoState = state.autoState;
@@ -578,6 +790,9 @@ async function init() {
   const tab = new URLSearchParams(location.search).get("tab");
   if (tab && TITLES[tab]) showTab(tab);
   renderAll();
+  if (tab === "cloud" && state.settings.cloudUrl) {
+    renderCloudPanel();
+  }
 }
 
 init();

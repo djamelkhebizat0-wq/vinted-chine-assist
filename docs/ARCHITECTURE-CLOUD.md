@@ -1,34 +1,45 @@
-# Architecture : un vrai « Cloud 24/7 » (non implémenté)
+# Architecture Cloud 24/7 — ce qui existe en 1.3.0
 
-Cette extension **n’inclut pas** de backend. Depuis **1.2.0**, un **Mode auto local** peut envoyer des messages / exécuter des reposts **tant que Chrome est ouvert**. Ce n’est toujours **pas** un cloud 24/7 : fermer le navigateur arrête tout.
+Depuis **1.3.0**, le dépôt contient un **prototype** de worker Node (`cloud/`) + un pont dans l’extension (onglet **Cloud**). Ce n’est **pas** une API officielle Vinted. L’UI ne passe au vert **que** si `GET /health` répond `ok`.
 
-Les alarmes et notifications **s’arrêtent** lorsque Chrome est fermé, mis en veille profonde, ou lorsque le service worker est inactif trop longtemps sans événement. Ce n’est **pas** un robot 24/7.
+Le **Mode auto local** (1.2.0) reste disponible : Chrome ouvert, sans serveur. Si le Cloud est activé, le Mode auto local **n’envoie plus** (XOR, doubles envois).
 
-## Ce que ferait un service distante (hors scope)
+## Implémenté maintenant
 
-Pour coller à un produit type Bleam « toujours allumé », il faudrait notamment :
+| Bloc | Détail |
+|------|--------|
+| Worker 24/7 | Boucle `runTick` : file dry-run, inbox (HTTP cookies puis Playwright), file repost, file post-vente |
+| Règles | `cloud/shared/rules.mjs` — même plancher / marge / paliers / caps que `lib/nego.js` + `lib/guard.js` |
+| Garde-fous | Master enable, délai mini, plafonds messages/reposts, cooldown conversation, journal, kill switch |
+| Auth vendeur | `API_TOKEN` Bearer — **pas** le mot de passe Vinted |
+| Session | Blob cookies chiffré AES-256-GCM (`ENCRYPTION_KEY`), poussé depuis l’extension uniquement |
+| Envoi | POST `/api/v2/conversations/…` (non officiel) puis Playwright (image Docker) |
+| Persist | Fichier `data/state.json` (volume Docker / Fly) |
+| REST | `GET /health` (public) ; Bearer : `/api/status`, `/api/log`, `/api/config`, `/api/session`, `/api/enable`, `/api/kill`, `/api/dry-run` |
+| Extension | Onglet Cloud : URL + jeton, Tester, sync règles / session, dry-run, STOP, statut honnête |
+| Déploiement | `docker compose up` ; chemin primaire documenté : **Fly.io** (`cloud/fly.toml`) |
 
-1. **Un serveur** (VM / container) qui tourne en continu, avec file d’attente (repost, relances, négo).
-2. **Une session Vinted authentifiée** côté serveur — cookies, tokens, risque élevé vis-à-vis des **CGU** et de la sécurité du compte.
-3. **Un worker de scraping / API non publique** — fragile, souvent interdit, à ne pas déguiser en « sync officielle ».
-4. **Auth utilisateur** (compte extension ≠ compte Vinted), chiffrement des secrets, journal d’audit.
-5. **File d’impression / webhooks** pour étiquettes, hors navigateur.
-6. **Clients mobiles natifs** (iOS / Android) avec push APNs / FCM — autre codebase, stores, review.
+## Toujours manquant
 
-Aucun de ces blocs n’est fourni ici, **même en mode démo**. L’UI ne prétend pas être connectée à un cloud.
+- **App native iOS / Android** (stores, APNs / FCM)
+- **Isolation multi-comptes** côté serveur (un token = un vendeur MVP)
+- **Webhooks d’impression** / file d’étiquettes hors navigateur
+- Parsing inbox **garanti** : le HTML et `/api/v2` changent ; Playwright est le filet
+- Session **éternelle** : si Vinted invalide les cookies, il faut rouvrir Chrome et « Synchroniser la session »
 
-## Équivalent local (ce qui existe en 1.1.0)
+## Hors ligne vs Chrome
 
-| Besoin 24/7 | Équivalent local |
-|-------------|------------------|
-| Réveil périodique | `chrome.alarms` (Chrome ouvert, intervalle ≥ 15 min) |
-| Données vendeur | CRM + CSV dans `chrome.storage.local` |
-| Négo | Moteur de règles (+ IA seulement si clé saisie) |
-| Multi-postes | Export CSV ; pas de sync temps réel |
-| Mobile | Pages options/CRM responsive ; pas d’app store |
+| Sans Chrome | Chrome requis |
+|-------------|---------------|
+| Health, status, dry-run, règles, plafonds, kill | Premier upload de session + refresh cookies |
+| Worker + Playwright **après** session sync | Mot de passe Vinted : jamais (uniquement cookies) |
 
-## Recommandation
+## Local XOR Cloud
 
-Gardez l’ordinateur allumé + Chrome ouvert si vous voulez des rappels. Pour deux comptes, utilisez **deux profils Chrome**. N’externalisez pas vos cookies Vinted vers un SaaS amateur.
+- Cloud ON → `modeAuto` local forcé OFF
+- Les deux actifs en même temps **ne doivent pas** envoyer
+- Recommandé : choisir **soit** Chrome ouvert (1.2), **soit** le VPS (1.3)
 
-Si vous construisez un backend un jour : isolez-le dans un autre dépôt, documentez le risque CGU, et ne simulez jamais un statut « connecté au cloud » depuis cette extension.
+## Risque CGU
+
+Automatiser messagerie / republication peut violer les CGU Vinted et valoir un ban. Prototype personnel, aucune garantie.

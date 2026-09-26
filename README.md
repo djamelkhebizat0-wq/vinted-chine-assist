@@ -1,94 +1,151 @@
-# Vinted Chine Assist 1.2.0
+# Vinted Chine Assist 1.3.0
 
-Extension Chrome **Manifest V3** pour **vinted.fr** (et vinted.com) : aide vendeur **locale**, usage **personnel**.
+Extension Chrome **Manifest V3** pour **vinted.fr** (et vinted.com) : aide vendeur **locale**, usage **personnel**, plus un **prototype Cloud 24/7** optionnel (`cloud/`).
 
-Code original, inspiré des *idées* d’outils type Bleam — **sans copie de code tiers**, sans cloud fictif, sans application mobile native.
+Code original, inspiré des *idées* d’outils type Bleam — **sans copie de code tiers**, **sans API officielle Vinted**, sans application mobile native.
 
-Les fichiers sont **à la racine** (`manifest.json` ici). Zip GitHub = dossier plat chargeable.
+Les fichiers d’extension sont **à la racine** (`manifest.json` ici). Le dossier `cloud/` n’est **pas** requis pour « Charger l’extension non empaquetée ».
+
+## Avertissement (CGU Vinted / ban)
+
+Automatiser des messages, des contre-offres ou des republications **peut violer les CGU Vinted** et entraîner une **suspension**. Outil personnel, à vos risques. L’auteur décline toute responsabilité.
+
+**Ne collez jamais votre mot de passe Vinted** dans le chat, l’extension ou le serveur. La session cloud = cookies de *votre* Chrome, que vous poussez vous-même.
 
 ## Installation (Load unpacked)
 
-1. Téléchargez le ZIP GitHub (Code → Download ZIP) ou clonez
-2. Dézippez : le dossier ouvert doit contenir **`manifest.json` à la racine** (pas un sous-dossier vide)
+1. Téléchargez le ZIP GitHub ou clonez
+2. Le dossier ouvert doit contenir **`manifest.json` à la racine**
 3. Chrome → `chrome://extensions` → **mode développeur**
-4. **Charger l’extension non empaquetée** → sélectionnez **ce dossier-là**
+4. **Charger l’extension non empaquetée** → ce dossier
 
-Si le zip a un unique sous-dossier `vinted-chine-assist-main/`, chargez **ce** sous-dossier (il contient `manifest.json`).
+`cloud/` peut rester à côté : Chrome l’ignore.
 
-## Mode auto (envoi réel, opt-in)
+## Mode auto local (1.2 — Chrome ouvert)
 
-**Par défaut OFF.** Tant que c’est OFF, comportement 1.1 : insertion / copie, pas d’envoi seul.
+**Par défaut OFF.** STOP immédiat coupe tout.
 
-### Activer
+Garde-fous : délai 60 s, 40 messages/jour, 20 reposts/jour, cooldown 90 min/conversation, pas d’achat auto, pas d’acceptation sous achat + marge, modèle vide = pas d’envoi.
 
-1. Connectez-vous sur Vinted dans Chrome
-2. Cliquez l’icône de l’extension
-3. **Activer Mode auto** (confirmation)
-4. Laissez **Chrome ouvert** (et de préférence un onglet Vinted)
+Si le **Cloud** est activé, ce Mode auto local **n’envoie plus** (XOR).
 
-**STOP immédiat** (bouton rouge) coupe tout envoi auto tout de suite.
+## Cloud 24/7 (prototype 1.3)
 
-Réglages fins : Paramètres → **Mode auto** (délai, plafonds, journal).
+Le worker Node continue négo / repost / post-vente **PC éteint**, une fois déployé + session sync.
 
-### Ce qui part tout seul (Chrome ouvert + Mode auto ON)
+### 1. Lancer le worker (Docker Compose)
 
-| Action | Comportement |
-|--------|----------------|
-| **Négo** | Offre acheteur détectée sur une conversation ouverte (ou onglet inbox ouvert par le poll) → calcul des règles → **envoi** du modèle (Insérer + bouton Envoyer, sinon POST session). Pas de bouton confirmer. |
-| **Repost** | Alarme file (≥ 15 min) → ouvre l’article et clique **Republier** / **Modifier puis Enregistrer**. |
-| **Post-vente** | Alarme après « vendu » ou texte de vente détecté → **envoi** merci / avis. |
+```bash
+cd cloud
+cp .env.example .env
+# Remplacez API_TOKEN et ENCRYPTION_KEY par de longues chaînes aléatoires
+docker compose up --build
+```
 
-### Garde-fous anti-ban
+Vérifier (sans jeton) :
 
-- Master **OFF** par défaut + **STOP**
-- Délai mini entre envois (défaut **60 s**, 15–600)
-- Plafond messages / jour (défaut **40**)
-- Plafond reposts / jour (défaut **20**)
-- Cooldown **par conversation** (défaut **90 min**)
-- Journal horodaté (type, cible, succès/échec)
-- Jamais d’**achat** auto
-- Jamais d’**acceptation** d’offre sous **achat + marge mini**
-- Rien n’est envoyé si le **modèle est vide**
+```bash
+curl -s http://127.0.0.1:8787/health
+# {"ok":true,"status":"up","version":"1.3.0",...}
+```
 
-Le popup affiche ON/OFF, compteurs du jour, dernières actions.
+Dry-run (simule une offre inbox, **sans** Vinted) :
+
+```bash
+curl -s -X POST http://127.0.0.1:8787/api/dry-run \
+  -H "Authorization: Bearer VOTRE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"listPrice":40,"offer":32,"conversationId":"sim-inbox"}'
+```
+
+Le JSON doit contenir `preview.action` et une ligne de journal `dry-run` ok. C’est le critère de succès hors-ligne.
+
+### 2. Connecter l’extension
+
+1. Paramètres → **Cloud & mobile**
+2. URL : `http://127.0.0.1:8787` (ou l’URL HTTPS Fly)
+3. Jeton = `API_TOKEN` du `.env` (**pas** le mot de passe Vinted)
+4. **Connecter / Tester** — le pastille passe **Connecté** seulement si `/health` répond
+5. **Synchroniser les règles**
+6. Ouvrez vinted.fr **connecté** → **Synchroniser la session**
+7. Cochez **Activer le worker cloud** (le Mode auto local se coupe)
+8. Optionnel : **Dry-run inbox** depuis l’onglet
+
+Si le serveur est down : **Déconnecté** ou **Erreur**, jamais vert.
+
+### 3. Déploiement primaire : Fly.io
+
+```bash
+cd cloud
+fly auth login
+fly launch --no-deploy --copy-config   # ajustez le nom d’app dans fly.toml
+fly volumes create vca_data --size 1 --region cdg
+fly secrets set API_TOKEN="…" ENCRYPTION_KEY="…"
+fly deploy
+```
+
+Puis dans l’extension : URL `https://VOTRE-APP.fly.dev`.
+
+VPS générique : même `docker compose`, ouvrez le port 8787 (ou un reverse-proxy HTTPS). Railway : Dockerfile + les mêmes secrets.
+
+`auto_stop_machines = false` et `min_machines_running = 1` dans `fly.toml` pour rester allumé.
+
+### 4. Rotation de session
+
+Si le journal cloud affiche `session-invalide` / `no-session` :
+
+1. Ouvrez Chrome, allez sur vinted.fr (reconnectez-vous si besoin)
+2. Paramètres → Cloud → **Synchroniser la session**
+3. Relancez un dry-run ou attendez le prochain tick (~45 s)
+
+Les cookies expirent. Le worker **ne stocke pas** le mot de passe.
+
+### 5. Test réel Vinted (à faire vous-même)
+
+Le dépôt ne peut pas se connecter à votre compte. Chez vous :
+
+1. Compose ou Fly UP, `/health` ok
+2. Extension pointée + jeton + **session sync** + worker ON
+3. Envoyez-vous une **offre test** depuis un second compte / un proche
+4. Vérifiez le journal cloud (`/api/log` ou l’onglet) : inbox ok puis `nego` ok/échec
+5. Si HTTP `/api/v2` refuse : Playwright (inclus dans Docker) tente l’inbox / l’envoi dans un Chromium headless — plus lent, plus fragile si le HTML change
+
+## Ce qui marche hors-ligne vs Chrome
+
+| Sans Chrome | Chrome encore utile |
+|-------------|---------------------|
+| Health, dry-run, règles, plafonds, kill | Uploader / rafraîchir les cookies |
+| Worker + Playwright après sync | Premier login Vinted |
 
 ## Fonctionnalités
 
-| # | Module | Auto (si Mode auto ON) | Manuel (toujours) |
-|---|--------|------------------------|-------------------|
-| 1 | Négo | Envoi de la réponse | Suggestion, Insérer, Copier, pré-remplissage |
-| 2 | Repost | Exécute file (edit/save ou republier) | File, intervalle, bouton suivant |
-| 3 | CRM | — | Stock, vendu, CSV, marge |
-| 4 | Colis | — | Étiquettes, checklist, bon |
-| 5 | Messages | — | Catégories + variables, insertion |
-| 6 | Templates articles | — | Titre / desc / formule |
-| 7 | Post-vente | Envoi merci / avis | Modèles + alarmes notification |
-| 8 | Planif | — | Rappels URL |
-| 9 | Cloud 24/7 | **Non** | Doc + onglet limites |
-| 10 | Mobile | — | Options responsive / notes PWA |
+| # | Module | Local (Chrome) | Cloud proto |
+|---|--------|----------------|-------------|
+| 1 | Négo | Mode auto + insertion | Worker inbox + règles |
+| 2 | Repost | Alarme / onglet | Playwright republier / save |
+| 3 | CRM | Local seulement | — |
+| 4 | Colis | Local seulement | Pas de webhooks print |
+| 5–6 | Messages / templates | Local | Sync des modèles négo/SAV |
+| 7 | Post-vente | Alarmes + envoi | File syncée + Playwright |
+| 8 | Planif | Local | — |
+| 9 | Cloud 24/7 | Pont honnête | Worker Docker / Fly |
+| 10 | Mobile natif | Non | Non |
 
-## Limites
+## Tests
 
-- Chrome **fermé** = plus d’auto, plus d’alarmes.
-- Pas de serveur 24/7 dans cette version (prépare le local ; le cloud viendra plus tard).
-- Détection / bouton Envoyer / republier **dépendent du HTML Vinted** (peut casser).
-- Le « repost » n’est **pas** une recréation complète avec photos (trop fragile sans API photos) : republication ou ré-enregistrement de l’annonce.
-- Session Vinted requise dans **ce** profil Chrome.
-- Usage abusif = risque de **ban**. Outil personnel, pas d’évasion de suspension.
-
-## Avertissement (CGU Vinted)
-
-Respectez les CGU. Le Mode auto envoie de vrais messages depuis votre session. L’auteur décline toute responsabilité.
+```bash
+node tests/run.mjs
+cd cloud && npm install && npm test
+```
 
 ## Fichiers
 
-- `manifest.json` — MV3 (racine)
-- `background.js` — alarmes, poll inbox, garde-fous
-- `lib/shared.js` `lib/nego.js` `lib/guard.js`
-- `content.js` `content-auto.js` `content.css`
+- `manifest.json` — MV3 (racine, Load unpacked)
+- `lib/shared.js` `lib/nego.js` `lib/guard.js` `lib/cloud.js`
+- `background.js` `content.js` `content-auto.js`
 - `options.*` `popup.*` `crm.*` `packing-slip.*`
+- `cloud/` — worker, Docker, Fly, tests
 - `docs/ARCHITECTURE-CLOUD.md`
-- `tests/run.mjs`
 
 ## Licence
 

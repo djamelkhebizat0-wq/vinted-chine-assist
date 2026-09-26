@@ -13,7 +13,7 @@
         <div class="logo" aria-hidden="true"></div>
         <div>
           <h1>Vinted Chine Assist</h1>
-          <p>v1.2.0 · local · personnel</p>
+          <p>v1.3.0 · local + cloud proto · personnel</p>
         </div>
       </div>
       <nav>
@@ -113,6 +113,7 @@
           </label>
         </div>
         <p class="desc">Jamais d’achat auto. Jamais d’acceptation d’offre sous achat + marge mini. Rien n’est envoyé si le modèle est vide. Journal ci-dessous.</p>
+        <p class="desc warn-text">Si le <strong>Cloud</strong> est activé, le Mode auto local n’envoie plus (XOR : évite les doubles messages). Préférez l’un ou l’autre.</p>
         <div id="autoStatusBox" class="desc"></div>
         <div id="autoLogBox" class="list"></div>
       </section>
@@ -240,13 +241,35 @@
 
       <section class="panel tab" data-tab="cloud">
         <div class="banner">
-          <h3>Pas de Cloud 24/7 dans l’extension</h3>
-          <p>Les alarmes, le CRM et la négo s’exécutent <strong>uniquement tant que Chrome est ouvert</strong> (et, pour les content scripts, sur vinted.fr / vinted.com). Il n’y a pas de serveur, pas de file d’attente distante, pas de bot qui tourne la nuit.</p>
+          <h3>Prototype Cloud 24/7 (opt-in)</h3>
+          <p>Un petit serveur dans <code>cloud/</code> peut tourner sur un VPS. Ce n’est <strong>pas</strong> une API officielle Vinted. Automatiser un compte peut violer les CGU et valoir un <strong>ban</strong>. Le statut n’est <strong>jamais vert</strong> si <code>/health</code> échoue.</p>
         </div>
-        <p>Pour un vrai 24/7 il faudrait un backend (session, files, légalité CGU) — voir <a href="docs/ARCHITECTURE-CLOUD.md" target="_blank" rel="noopener">docs/ARCHITECTURE-CLOUD.md</a>.</p>
+        <div class="grid2">
+          <label class="field"><span>URL du worker</span>
+            <input type="url" id="cloudUrl" placeholder="http://127.0.0.1:8787" autocomplete="off" />
+          </label>
+          <label class="field"><span>Jeton API (pas le mot de passe Vinted)</span>
+            <input type="password" id="cloudToken" autocomplete="off" placeholder="API_TOKEN du .env" />
+          </label>
+        </div>
+        <div class="row-actions">
+          <button type="button" class="btn sm" id="btnCloudTest">Connecter / Tester</button>
+          <button type="button" class="btn sm" id="btnCloudSyncRules">Synchroniser les règles</button>
+          <button type="button" class="btn sm" id="btnCloudSyncSession">Synchroniser la session</button>
+          <button type="button" class="btn sm" id="btnCloudDry">Dry-run inbox</button>
+          <button type="button" class="btn danger" id="btnCloudKill">STOP distant</button>
+        </div>
+        <label class="check mt">
+          <input type="checkbox" id="cloudEnabled" />
+          <span>Activer le worker cloud (coupe le Mode auto local pour éviter les doubles envois)</span>
+        </label>
+        <p class="desc" id="cloudStatusLine"><span class="cloud-pill disconnected" id="cloudPill">Déconnecté</span> <span id="cloudStatusDetail">Aucune vérification pour l’instant.</span></p>
+        <div id="cloudRemoteBox" class="desc"></div>
+        <div id="cloudLogBox" class="list"></div>
+        <p class="desc">Session = cookies Vinted de <em>ce</em> Chrome, chiffrés sur le serveur. Si Vinted invalide les cookies, rouvrez Chrome quelques secondes et cliquez « Synchroniser la session ». <strong>Ne collez jamais le mot de passe Vinted</strong> ici.</p>
         <div class="banner">
-          <h3>Pas d’application native iOS / Android</h3>
-          <p>Cette page est responsive (mobile Chrome / Kiwi). Chrome Android officiel n’installe pas les extensions MV3. Un PWA autonome n’existe pas ici : ce n’est pas une app stores.</p>
+          <h3>Toujours pas d’app native iOS / Android</h3>
+          <p>Pas d’isolation multi-comptes côté serveur, pas de webhooks d’impression. Voir <a href="docs/ARCHITECTURE-CLOUD.md" target="_blank" rel="noopener">ARCHITECTURE-CLOUD.md</a>.</p>
         </div>
       </section>
 
@@ -259,6 +282,7 @@
   <script src="lib/shared.js"></script>
   <script src="lib/nego.js"></script>
   <script src="lib/guard.js"></script>
+  <script src="lib/cloud.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

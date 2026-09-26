@@ -1,9 +1,9 @@
 /**
- * Service worker MV3 — alarmes locales, Mode auto, garde-fous, IA optionnelle.
- * Aucun backend cloud : tout s'arrête quand Chrome est fermé.
+ * Service worker MV3 — alarmes locales, Mode auto, pont cloud 1.3.0.
+ * Le Mode auto local s'arrête si cloudEnabled (XOR). Le worker distant tourne sans Chrome.
  */
 /* global importScripts, VCA */
-importScripts("lib/shared.js", "lib/nego.js", "lib/guard.js");
+importScripts("lib/shared.js", "lib/nego.js", "lib/guard.js", "lib/cloud.js");
 
 const ALARM_REPOST = "vca-repost";
 const ALARM_INBOX = "vca-inbox-poll";
@@ -23,7 +23,7 @@ async function syncRepostAlarm() {
 async function syncInboxAlarm() {
   const { settings } = await VCA.loadAll();
   await chrome.alarms.clear(ALARM_INBOX);
-  if (!settings.modeAuto) return;
+  if (!VCA.localAutoActive(settings)) return;
   const minutes = Math.max(1, Number(settings.autoInboxPollMinutes) || 1);
   await chrome.alarms.create(ALARM_INBOX, {
     delayInMinutes: minutes,
@@ -101,7 +101,7 @@ function notify(id, title, message, url) {
 
 async function updateBadge() {
   const { settings } = await VCA.loadAll();
-  if (settings.modeAuto) {
+  if (VCA.localAutoActive(settings)) {
     const g = await VCA.loadGuard();
     chrome.action.setBadgeBackgroundColor({ color: "#c23b3b" });
     chrome.action.setBadgeText({ text: g.state.messagesSent > 0 ? String(g.state.messagesSent) : "ON" });
@@ -225,7 +225,7 @@ async function ensureInboxTab() {
 
 async function tickInboxTabs() {
   const { settings } = await VCA.loadAll();
-  if (!settings.modeAuto) return { skipped: "off" };
+  if (!VCA.localAutoActive(settings)) return { skipped: settings.cloudEnabled ? "cloud" : "off" };
   let tabs = await vintedTabs();
   if (!tabs.length) {
     const inbox = await ensureInboxTab();
@@ -258,7 +258,7 @@ async function executeAutoRepost() {
   const { settings, repost } = await VCA.loadAll();
   if (!repost.length) return { ok: false, error: "File vide" };
   const item = repost[0];
-  if (!settings.modeAuto || !settings.autoRepostDo) {
+  if (!VCA.localAutoActive(settings) || !settings.autoRepostDo) {
     notify("vca-repost-" + Date.now(), "Repost — prochain article", item.title || item.url, item.url);
     if (settings.repostAutoOpen && item.url) {
       await openUrl(item.url, true);
@@ -301,7 +301,7 @@ async function executeAutoRepost() {
 async function executeAutoPostsale(job, kind) {
   const { settings } = await VCA.loadAll();
   if (!job) return;
-  if (!settings.modeAuto || !settings.autoPostSaleSend) {
+  if (!VCA.localAutoActive(settings) || !settings.autoPostSaleSend) {
     notify(
       "vca-sav-" + job.id,
       kind === "avis" ? "Demande d'avis" : "Remerciement post-vente",
@@ -332,6 +332,9 @@ async function executeAutoPostsale(job, kind) {
 
 async function setModeAuto(on) {
   const all = await VCA.loadAll();
+  if (on && all.settings.cloudEnabled) {
+    return { ok: false, error: "cloud-xor", modeAuto: false };
+  }
   all.settings.modeAuto = !!on;
   await VCA.storageSet({ [VCA.KEYS.settings]: all.settings });
   const tabs = await vintedTabs();
@@ -464,7 +467,15 @@ async function callOpenAi(settings, payload) {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   const type = msg?.type;
   if (type === "VCA_PING") {
-    sendResponse({ ok: true, version: VCA.VERSION, cloud: false });
+    (async () => {
+      const { settings } = await VCA.loadAll();
+      sendResponse({
+        ok: true,
+        version: VCA.VERSION,
+        cloud: false,
+        cloudConfigured: !!settings.cloudEnabled
+      });
+    })();
     return true;
   }
   if (type === "VCA_OPEN_OPTIONS") {
@@ -522,7 +533,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       const g = await VCA.loadGuard();
       sendResponse({
         ok: true,
-        modeAuto: !!all.settings.modeAuto,
+        modeAuto: VCA.localAutoActive(all.settings),
+        cloudEnabled: !!all.settings.cloudEnabled,
+        cloudUrl: all.settings.cloudUrl || "",
         settings: {
           autoDailyMessageCap: all.settings.autoDailyMessageCap,
           autoDailyRepostCap: all.settings.autoDailyRepostCap,
@@ -531,6 +544,25 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         state: g.state,
         log: g.log.slice(0, 12)
       });
+    })();
+    return true;
+  }
+  if (type === "VCA_CLOUD_HEALTH") {
+    VCA.cloudHealth(msg.url || "").then(sendResponse);
+    return true;
+  }
+  if (type === "VCA_CLOUD_STATUS") {
+    (async () => {
+      const { settings } = await VCA.loadAll();
+      const url = msg.url || settings.cloudUrl;
+      const token = msg.token || settings.cloudToken;
+      const health = await VCA.cloudHealth(url);
+      if (!health.ok) {
+        sendResponse(health);
+        return;
+      }
+      const st = await VCA.cloudRequest(url, token, "/api/status");
+      sendResponse(st);
     })();
     return true;
   }

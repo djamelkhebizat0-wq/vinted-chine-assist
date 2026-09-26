@@ -698,10 +698,10 @@
           </div>
           <div class="vca-pane" data-pane="cloud">
             <div class="vca-banner">
-              <strong>Mode local uniquement</strong>
-              <p>Pas de Cloud 24/7 : les alarmes s’arrêtent quand Chrome est fermé. Pas d’app iOS/Android native. Voir Paramètres → Cloud &amp; mobile.</p>
+              <strong id="vca-cloud-title">Cloud 24/7 (prototype)</strong>
+              <p id="vca-cloud-hint">Le statut réel (Connecté / Déconnecté / Erreur) est dans Paramètres. Jamais vert si le serveur est down. Pas d’API officielle Vinted.</p>
             </div>
-            <button type="button" class="vca-link" id="vca-open-cloud">Lire les limites</button>
+            <button type="button" class="vca-link" id="vca-open-cloud">Ouvrir Paramètres → Cloud</button>
           </div>
         </div>
         <div id="vca-auto-banner" class="vca-banner" hidden></div>
@@ -924,7 +924,10 @@
   function refreshAutoBanner() {
     const el = root?.querySelector("#vca-auto-banner");
     if (!el) return;
-    if (settings.modeAuto) {
+    if (settings.cloudEnabled) {
+      el.hidden = false;
+      el.textContent = "Cloud demandé — Mode auto local coupé. Statut réel dans Paramètres (health).";
+    } else if (settings.modeAuto) {
       el.hidden = false;
       el.textContent = "Mode auto ON — envoi réel (caps / délai). STOP dans le popup.";
     } else {

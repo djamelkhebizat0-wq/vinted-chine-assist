@@ -22,14 +22,43 @@ async function refreshAutoCard() {
   const caps = document.getElementById("autoCaps");
   dot.className = "dot " + (on ? "on" : "off");
   btn.textContent = on ? "Mode auto : ON" : "Activer Mode auto";
-  hint.textContent = on
-    ? "Envoi réel actif (négo / repost / post-vente) tant que Chrome est ouvert."
-    : "Désactivé. Insertion manuelle uniquement — rien n’est envoyé tout seul.";
+  if (st?.cloudEnabled) {
+    hint.textContent = "Cloud activé : Mode auto local coupé (XOR). Le worker distant envoie s’il est vraiment joignable.";
+    btn.textContent = "Local coupé (cloud)";
+    btn.disabled = true;
+  } else {
+    hint.textContent = on
+      ? "Envoi réel actif (négo / repost / post-vente) tant que Chrome est ouvert."
+      : "Désactivé. Insertion manuelle uniquement — rien n’est envoyé tout seul.";
+    btn.disabled = false;
+  }
   const s = st?.state || {};
   const cap = st?.settings || {};
   caps.textContent = `Messages ${s.messagesSent || 0}/${cap.autoDailyMessageCap || 40} · Reposts ${s.repostsDone || 0}/${cap.autoDailyRepostCap || 20} · délai ${cap.autoMinDelaySeconds || 60}s`;
   renderLog(st?.log);
   return st;
+}
+
+async function refreshCloudCard() {
+  const all = await VCA.loadAll();
+  const dot = document.getElementById("cloudDot");
+  const hint = document.getElementById("cloudHint");
+  if (!dot || !hint) return;
+  const url = all.settings.cloudUrl;
+  if (!url) {
+    dot.className = "dot off";
+    hint.textContent = "Déconnecté — aucune URL. Paramètres → Cloud.";
+    return;
+  }
+  const health = await VCA.cloudHealth(url);
+  if (!health.ok) {
+    dot.className = "dot err";
+    hint.textContent = (health.status === "error" ? "Erreur" : "Déconnecté") + " — " + (health.error || "health KO");
+    return;
+  }
+  dot.className = "dot on";
+  const wanted = all.settings.cloudEnabled ? " · worker demandé ON" : " · worker localement OFF";
+  hint.textContent = "Connecté (/health ok)" + wanted;
 }
 
 async function load() {
@@ -68,7 +97,11 @@ async function load() {
   }
 
   await refreshAutoCard();
+  await refreshCloudCard();
 
+  document.getElementById("btnCloud")?.addEventListener("click", () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL("options.html?tab=cloud") });
+  });
   document.getElementById("btnOptions").addEventListener("click", () => {
     chrome.runtime.openOptionsPage();
   });
@@ -81,6 +114,10 @@ async function load() {
   });
   document.getElementById("btnModeAuto").addEventListener("click", async () => {
     const cur = await chrome.runtime.sendMessage({ type: "VCA_AUTO_STATUS" });
+    if (cur?.cloudEnabled) {
+      pageHint.textContent = "Cloud actif : Mode auto local désactivé (XOR).";
+      return;
+    }
     const next = !cur?.modeAuto;
     if (next && !confirm("Activer le Mode auto ? Les réponses / reposts / post-vente partiront seuls (caps + délai). Chrome doit rester ouvert.")) {
       return;
@@ -90,8 +127,14 @@ async function load() {
   });
   document.getElementById("btnKill").addEventListener("click", async () => {
     await chrome.runtime.sendMessage({ type: "VCA_KILL_AUTO" });
+    if (settings.cloudEnabled && settings.cloudUrl) {
+      await VCA.cloudRequest(settings.cloudUrl, settings.cloudToken, "/api/kill", { method: "POST", body: {} });
+      settings.cloudEnabled = false;
+      await VCA.storageSet({ [VCA.KEYS.settings]: settings });
+    }
     await refreshAutoCard();
-    pageHint.textContent = "STOP : plus aucun envoi auto.";
+    await refreshCloudCard();
+    pageHint.textContent = "STOP : plus aucun envoi auto (local + cloud si joignable).";
   });
 
   btnToggle.addEventListener("click", async () => {

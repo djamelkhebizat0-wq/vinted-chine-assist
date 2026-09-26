@@ -79,6 +79,10 @@ assert(migrated.nego.length >= 1, "migrate old reponsesRapides into nego");
 const settings = VCA.migrateSettings({ negotiationFloorPercent: 12, suggestCounterPercent: 6 });
 assert(settings.maxDropPercent === 12 && settings.counterStepPercent === 6, "migrate old % settings");
 assert(settings.modeAuto === false, "mode auto default off");
+assert(settings.cloudEnabled === false, "cloud default off");
+assert(VCA.VERSION === "1.3.0", "version 1.3.0");
+assert(VCA.localAutoActive({ modeAuto: true, cloudEnabled: false }) === true, "local auto when no cloud");
+assert(VCA.localAutoActive({ modeAuto: true, cloudEnabled: true }) === false, "XOR: cloud blocks local auto");
 
 const gOff = VCA.guardCheck({ modeAuto: false, autoMinDelaySeconds: 60, autoDailyMessageCap: 40 }, VCA.emptyAutoState(), "message", "c1");
 assert(gOff.ok === false && gOff.reason === "mode-off", "guard blocks when off");
