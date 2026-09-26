@@ -498,9 +498,16 @@ async function renderCloudPanel(opts) {
   }
   setCloudPill("connected", "Connecté", `Worker ${health.data?.version || ""} — /health ok`);
   const { token } = await cloudCreds();
+  if (!token) {
+    box.textContent = "Serveur joignable. Saisissez le jeton API pour lire plafonds et journal.";
+    renderCloudLog([]);
+    return;
+  }
   const st = await VCA.cloudRequest(url, token, "/api/status");
   if (!st.ok) {
     setCloudPill("error", "Erreur", st.error || "Jeton ou /api/status");
+    box.textContent = "";
+    renderCloudLog([]);
     return;
   }
   const d = st.data;
