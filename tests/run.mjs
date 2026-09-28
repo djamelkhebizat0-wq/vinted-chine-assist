@@ -10,6 +10,7 @@ vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(root, "lib/shared.js"), "utf8"), ctx);
 vm.runInContext(fs.readFileSync(path.join(root, "lib/nego.js"), "utf8"), ctx);
 vm.runInContext(fs.readFileSync(path.join(root, "lib/guard.js"), "utf8"), ctx);
+vm.runInContext(fs.readFileSync(path.join(root, "lib/radar.js"), "utf8"), ctx);
 const { VCA } = ctx;
 
 let failed = 0;
@@ -80,7 +81,7 @@ const settings = VCA.migrateSettings({ negotiationFloorPercent: 12, suggestCount
 assert(settings.maxDropPercent === 12 && settings.counterStepPercent === 6, "migrate old % settings");
 assert(settings.modeAuto === false, "mode auto default off");
 assert(settings.cloudEnabled === false, "cloud default off");
-assert(VCA.VERSION === "1.3.0", "version 1.3.0");
+assert(VCA.VERSION === "1.4.0", "version 1.4.0");
 assert(VCA.localAutoActive({ modeAuto: true, cloudEnabled: false }) === true, "local auto when no cloud");
 assert(VCA.localAutoActive({ modeAuto: true, cloudEnabled: true }) === false, "XOR: cloud blocks local auto");
 
@@ -112,6 +113,22 @@ assert(VCA.offerBelowMinMargin(16, { costPrice: 12, minMarginEur: 5 }) === true,
 assert(VCA.offerBelowMinMargin(18, { costPrice: 12, minMarginEur: 5 }) === false, "at min margin");
 assert(VCA.templateReady({ text: "ok" }) === false, "short template rejected");
 assert(VCA.templateReady({ text: "Merci pour votre offre de {{offre}} € !" }) === true, "template ready");
+
+const hawas = VCA.scoreRadarDeal({
+  id: "h1", title: "Hawas Rasasi 100ml", price: 18, url: "https://www.vinted.fr/items/1"
+}, VCA.DEFAULT_RADAR_QUERIES, { radarMinMarginEur: 10 });
+assert(hawas.ok && hawas.score === "A", "radar Hawas A");
+
+const tester = VCA.scoreRadarDeal({
+  id: "t1", title: "Sauvage tester", price: 28, raw: "tester 100ml"
+}, VCA.DEFAULT_RADAR_QUERIES, {});
+assert(tester.ok && tester.score !== "A", "radar tester not A");
+
+const seen = {};
+assert(VCA.radarShouldAlert(seen, { id: "9", price: 20 }, { score: "A", id: "9", price: 20 }) === true, "radar first A alerts");
+VCA.radarMarkSeen(seen, { id: "9", price: 20 }, { score: "A", id: "9" }, true);
+assert(VCA.radarShouldAlert(seen, { id: "9", price: 20 }, { score: "A", id: "9", price: 20 }) === false, "radar same price no re-alert");
+assert(VCA.radarShouldAlert(seen, { id: "9", price: 14 }, { score: "A", id: "9", price: 14 }) === true, "radar drop 6€ re-alert");
 
 if (failed) {
   console.error(`\n${failed} failed`);

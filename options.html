@@ -13,7 +13,7 @@
         <div class="logo" aria-hidden="true"></div>
         <div>
           <h1>Vinted Chine Assist</h1>
-          <p>v1.3.0 · local + cloud proto · personnel</p>
+          <p>v1.4.0 · local + cloud + radar · personnel</p>
         </div>
       </div>
       <nav>
@@ -27,6 +27,7 @@
         <button type="button" class="nav-btn" data-tab="colis">Étiquettes &amp; colis</button>
         <button type="button" class="nav-btn" data-tab="sav">Post-vente</button>
         <button type="button" class="nav-btn" data-tab="planif">Comptes &amp; planif</button>
+        <button type="button" class="nav-btn" data-tab="radar">Radar</button>
         <button type="button" class="nav-btn" data-tab="cloud">Cloud &amp; mobile</button>
       </nav>
     </aside>
@@ -239,6 +240,36 @@
         <div id="schedList" class="list mt"></div>
       </section>
 
+      <section class="panel tab" data-tab="radar">
+        <div class="banner">
+          <h3>Radar bonnes affaires</h3>
+          <p>Surveille les recherches Vinted (Chrome ouvert, ou worker cloud). <strong>Pas d’API officielle</strong> — faux positifs possibles. Cosmétiques / parfums : respectez les règles Vinted (tester, contrefaçon, contenu).</p>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="radarEnabled" checked />
+          <span>Activer la veille (alarme 30–60 min, Chrome ouvert)</span>
+        </label>
+        <div class="grid2">
+          <label class="field"><span>Intervalle (minutes)</span>
+            <input type="number" id="radarIntervalMinutes" min="30" max="60" step="5" />
+          </label>
+          <label class="field"><span>Marge nette mini par défaut (€)</span>
+            <input type="number" id="radarMinMarginEur" min="0" step="1" />
+          </label>
+        </div>
+        <div class="row-actions">
+          <button type="button" class="btn primary" id="btnRadarScan">Scanner maintenant</button>
+          <button type="button" class="btn sm" id="btnRadarReset">Restaurer la pile Djamel</button>
+        </div>
+        <p class="desc" id="radarScanHint">Score A = notification silencieuse + pastille sur l’icône. Déjà vu : alerte seulement si le prix baisse d’au moins 5 €.</p>
+        <h3 class="mt">Requêtes / marques</h3>
+        <p class="desc">Achat max + revente estimée. Marge nette = revente − prix − frais CRM.</p>
+        <div id="radarQueryList" class="list"></div>
+        <button type="button" class="btn sm" id="btnRadarAdd">+ Requête</button>
+        <h3 class="mt">Boîte Radar (50 max)</h3>
+        <div id="radarInboxBox" class="list"></div>
+      </section>
+
       <section class="panel tab" data-tab="cloud">
         <div class="banner">
           <h3>Prototype Cloud 24/7 (opt-in)</h3>
@@ -282,6 +313,7 @@
   <script src="lib/shared.js"></script>
   <script src="lib/nego.js"></script>
   <script src="lib/guard.js"></script>
+  <script src="lib/radar.js"></script>
   <script src="lib/cloud.js"></script>
   <script src="options.js"></script>
 </body>

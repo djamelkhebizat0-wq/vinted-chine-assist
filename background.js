@@ -3,10 +3,11 @@
  * Le Mode auto local s'arrête si cloudEnabled (XOR). Le worker distant tourne sans Chrome.
  */
 /* global importScripts, VCA */
-importScripts("lib/shared.js", "lib/nego.js", "lib/guard.js", "lib/cloud.js");
+importScripts("lib/shared.js", "lib/nego.js", "lib/guard.js", "lib/cloud.js", "lib/radar.js");
 
 const ALARM_REPOST = "vca-repost";
 const ALARM_INBOX = "vca-inbox-poll";
+const ALARM_RADAR = "vca-radar";
 const PREFIX_SCHED = "vca-sched-";
 const PREFIX_SAV = "vca-sav-";
 
@@ -70,11 +71,23 @@ async function syncPostsaleAlarms() {
   }
 }
 
+async function syncRadarAlarm() {
+  const { settings } = await VCA.loadAll();
+  await chrome.alarms.clear(ALARM_RADAR);
+  if (settings.radarEnabled === false) return;
+  const minutes = Math.max(30, Math.min(60, Number(settings.radarIntervalMinutes) || 45));
+  await chrome.alarms.create(ALARM_RADAR, {
+    delayInMinutes: minutes,
+    periodInMinutes: minutes
+  });
+}
+
 async function syncAllAlarms() {
   await syncRepostAlarm();
   await syncInboxAlarm();
   await syncScheduleAlarms();
   await syncPostsaleAlarms();
+  await syncRadarAlarm();
 }
 
 async function rememberNotifyUrl(notifId, url) {
@@ -88,20 +101,29 @@ async function rememberNotifyUrl(notifId, url) {
   await VCA.storageSet({ [VCA.KEYS.notifyUrls]: map });
 }
 
-function notify(id, title, message, url) {
-  chrome.notifications.create(id, {
+function notify(id, title, message, url, extra) {
+  const opts = {
     type: "basic",
     iconUrl: "icons/icon128.png",
     title,
     message: message || "",
-    priority: 1
-  });
+    priority: extra?.silent ? 0 : 1
+  };
+  if (extra?.silent) opts.silent = true;
+  chrome.notifications.create(id, opts);
   if (url) rememberNotifyUrl(id, url);
 }
 
 async function updateBadge() {
-  const { settings } = await VCA.loadAll();
-  if (VCA.localAutoActive(settings)) {
+  const all = await VCA.loadAll();
+  const unread = Number(all.radarUnread) || 0;
+  if (unread > 0) {
+    chrome.action.setBadgeBackgroundColor({ color: "#099a8e" });
+    chrome.action.setBadgeText({ text: unread > 99 ? "99+" : String(unread) });
+    chrome.action.setTitle({ title: `Radar : ${unread} affaire(s) A` });
+    return;
+  }
+  if (VCA.localAutoActive(all.settings)) {
     const g = await VCA.loadGuard();
     chrome.action.setBadgeBackgroundColor({ color: "#c23b3b" });
     chrome.action.setBadgeText({ text: g.state.messagesSent > 0 ? String(g.state.messagesSent) : "ON" });
@@ -330,6 +352,113 @@ async function executeAutoPostsale(job, kind) {
   return res;
 }
 
+async function scrapeRadarTab(tabId) {
+  const res = await pingTab(tabId, { type: "VCA_RADAR_SCRAPE" });
+  return Array.isArray(res?.cards) ? res.cards : [];
+}
+
+async function runRadarScan(opts) {
+  const all = await VCA.loadAll();
+  if (all.settings.radarEnabled === false) return { ok: false, skipped: "off" };
+  const queries = VCA.migrateRadarQueries(all.radarQueries);
+  const enabled = queries.filter((q) => q.enabled !== false);
+  let cards = [];
+
+  if (opts?.tabId) {
+    cards = cards.concat(await scrapeRadarTab(opts.tabId));
+  }
+
+  const tabs = await vintedTabs();
+  for (const tab of tabs) {
+    if (!tab.id || tab.id === opts?.tabId) continue;
+    cards = cards.concat(await scrapeRadarTab(tab.id));
+  }
+
+  const needQuery = !!opts?.fromAlarm || (opts?.openQuery !== false && cards.length < 2);
+  let openedTabId = null;
+  if (needQuery && enabled.length) {
+    const idx = Number(all.radarCursor) || 0;
+    const q = enabled[idx % enabled.length];
+    await VCA.storageSet({ [VCA.KEYS.radarCursor]: (idx + 1) % Math.max(1, enabled.length) });
+    const origin = (tabs[0]?.url || "").startsWith("https://www.vinted.com")
+      ? "https://www.vinted.com"
+      : "https://www.vinted.fr";
+    const created = await chrome.tabs.create({
+      url: VCA.radarSearchUrl(q.query, origin),
+      active: !!opts?.active && !opts?.fromAlarm
+    });
+    openedTabId = created.id;
+    await waitTabComplete(created.id, 18000);
+    await new Promise((r) => setTimeout(r, 1600));
+    const extra = await scrapeRadarTab(created.id);
+    cards = cards.concat(extra.map((c) => ({ ...c, queryId: q.id })));
+    if (opts?.fromAlarm && created.id) {
+      try { await chrome.tabs.remove(created.id); } catch (_) { /* ignore */ }
+      openedTabId = null;
+    }
+  }
+
+  const byId = new Map();
+  cards.forEach((c) => {
+    if (c?.id && !byId.has(c.id)) byId.set(c.id, c);
+  });
+  cards = [...byId.values()];
+
+  const seen = all.radarSeen || {};
+  let unread = Number(all.radarUnread) || 0;
+  const scored = [];
+  let alerts = 0;
+  for (const card of cards) {
+    const s = VCA.scoreRadarDeal(card, queries, all.settings);
+    if (!s.ok) continue;
+    const deal = Object.assign({}, s, {
+      title: card.title || s.title,
+      url: card.url || s.url,
+      ts: new Date().toISOString()
+    });
+    scored.push(deal);
+    const alert = VCA.radarShouldAlert(seen, card, deal);
+    VCA.radarMarkSeen(seen, card, deal, alert);
+    if (alert) {
+      alerts += 1;
+      unread += 1;
+      notify(
+        "vca-radar-" + deal.id,
+        `Radar A · ${deal.brand || "Deal"}`,
+        `${(deal.title || "").slice(0, 48)} · ${VCA.formatEuro(deal.price)} € · marge ~${VCA.formatEuro(deal.net)} €`,
+        deal.url,
+        { silent: true }
+      );
+    }
+  }
+
+  const inbox = VCA.radarMergeInbox(all.radarInbox, scored);
+  await VCA.storageSet({
+    [VCA.KEYS.radarInbox]: inbox,
+    [VCA.KEYS.radarSeen]: seen,
+    [VCA.KEYS.radarUnread]: unread
+  });
+  await updateBadge();
+
+  if (scored.length && all.settings.cloudUrl && all.settings.cloudToken) {
+    try {
+      await VCA.cloudRequest(all.settings.cloudUrl, all.settings.cloudToken, "/api/radar", {
+        method: "POST",
+        body: { deals: scored, queries }
+      });
+    } catch (_) { /* cloud optionnel */ }
+  }
+
+  return {
+    ok: true,
+    cards: cards.length,
+    scored: scored.length,
+    alerts,
+    inbox: inbox.slice(0, 50),
+    openedTabId
+  };
+}
+
 async function setModeAuto(on) {
   const all = await VCA.loadAll();
   if (on && all.settings.cloudEnabled) {
@@ -377,14 +506,20 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes[VCA.KEYS.settings] || changes[VCA.KEYS.repost]) {
     syncRepostAlarm();
     syncInboxAlarm();
+    syncRadarAlarm();
     updateBadge();
   }
+  if (changes[VCA.KEYS.radarUnread] || changes[VCA.KEYS.radarInbox]) updateBadge();
   if (changes[VCA.KEYS.schedule]) syncScheduleAlarms();
   if (changes[VCA.KEYS.postsale]) syncPostsaleAlarms();
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   const name = alarm?.name || "";
+  if (name === ALARM_RADAR) {
+    await runRadarScan({ fromAlarm: true });
+    return;
+  }
   if (name === ALARM_INBOX) {
     await tickInboxTabs();
     return;
@@ -564,6 +699,45 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       const st = await VCA.cloudRequest(url, token, "/api/status");
       sendResponse(st);
     })();
+    return true;
+  }
+  if (type === "VCA_RADAR_SCAN") {
+    (async () => {
+      let tabId = msg.tabId;
+      if (!tabId) {
+        try {
+          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          if (tab?.id && /vinted\.(fr|com)/.test(tab.url || "")) tabId = tab.id;
+        } catch (_) { /* ignore */ }
+      }
+      const res = await runRadarScan({
+        tabId,
+        active: true,
+        openQuery: msg.openQuery !== false,
+        fromAlarm: false
+      });
+      sendResponse(res);
+    })();
+    return true;
+  }
+  if (type === "VCA_RADAR_STATUS") {
+    (async () => {
+      const all = await VCA.loadAll();
+      sendResponse({
+        ok: true,
+        enabled: all.settings.radarEnabled !== false,
+        unread: Number(all.radarUnread) || 0,
+        inbox: (all.radarInbox || []).slice(0, 50),
+        queries: all.radarQueries
+      });
+    })();
+    return true;
+  }
+  if (type === "VCA_RADAR_MARK_READ") {
+    VCA.storageSet({ [VCA.KEYS.radarUnread]: 0 }).then(() => {
+      updateBadge();
+      sendResponse({ ok: true });
+    });
     return true;
   }
   if (type === "VCA_AI_NEGO") {

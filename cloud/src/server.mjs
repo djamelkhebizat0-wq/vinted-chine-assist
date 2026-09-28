@@ -49,7 +49,7 @@ function publicStatus() {
   const sess = s.session?.uploadedAt ? { uploadedAt: s.session.uploadedAt, origin: s.session.origin } : null;
   return {
     ok: true,
-    version: "1.3.0",
+    version: "1.4.0",
     cloud: true,
     officialVintedApi: false,
     enabled: !!(s.enabled && !s.killed),
@@ -66,6 +66,7 @@ function publicStatus() {
       autoDailyRepostCap: s.config?.settings?.autoDailyRepostCap ?? 20,
       autoMinDelaySeconds: s.config?.settings?.autoMinDelaySeconds ?? 60
     },
+    radarCount: (s.radarInbox || []).length,
     log: (s.log || []).slice(0, 15)
   };
 }
@@ -87,7 +88,7 @@ const server = http.createServer(async (req, res) => {
     json(res, 200, {
       ok: true,
       status: "up",
-      version: "1.3.0",
+      version: "1.4.0",
       time: new Date().toISOString()
     });
     return;
@@ -114,7 +115,8 @@ const server = http.createServer(async (req, res) => {
           settings: body.settings || s.config.settings,
           templates: body.templates || s.config.templates,
           repost: Array.isArray(body.repost) ? body.repost : s.config.repost,
-          postsale: Array.isArray(body.postsale) ? body.postsale : s.config.postsale
+          postsale: Array.isArray(body.postsale) ? body.postsale : s.config.postsale,
+          radarQueries: Array.isArray(body.radarQueries) ? body.radarQueries : s.config.radarQueries
         };
         log(s, { type: "config", ok: true, detail: "Règles synchronisées depuis l’extension" });
         return s;
@@ -188,6 +190,23 @@ const server = http.createServer(async (req, res) => {
         ...(after.config?.settings || {})
       });
       json(res, 200, { ok: true, job, preview, log: after.log.slice(0, 5) });
+      return;
+    }
+    if (req.method === "GET" && url.pathname === "/api/radar") {
+      const s = loadState();
+      json(res, 200, { ok: true, inbox: (s.radarInbox || []).slice(0, 50) });
+      return;
+    }
+    if (req.method === "POST" && url.pathname === "/api/radar") {
+      const body = await readBody(req);
+      const { radarMergeInbox } = await import("../shared/radar.mjs");
+      mutate((s) => {
+        if (Array.isArray(body.queries)) s.config.radarQueries = body.queries;
+        s.radarInbox = radarMergeInbox(s.radarInbox, body.deals || []);
+        log(s, { type: "radar", ok: true, detail: `${(body.deals || []).length} deal(s) reçus` });
+        return s;
+      });
+      json(res, 200, { ok: true, inbox: loadState().radarInbox.slice(0, 50) });
       return;
     }
     json(res, 404, { ok: false, error: "not-found" });

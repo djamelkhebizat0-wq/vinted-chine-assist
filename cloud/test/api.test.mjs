@@ -64,7 +64,7 @@ test("API health + dry-run + auth", async (t) => {
   const health = await (await fetch(`${base}/health`)).json();
   assert.equal(health.ok, true);
   assert.equal(health.status, "up");
-  assert.equal(health.version, "1.3.0");
+  assert.equal(health.version, "1.4.0");
 
   const denied = await fetch(`${base}/api/status`);
   assert.equal(denied.status, 401);
@@ -88,4 +88,26 @@ test("API health + dry-run + auth", async (t) => {
   assert.equal(dry.preview.ok, true);
   assert.ok(["counter", "accept", "refuse"].includes(dry.preview.action));
   assert.ok(dry.log.some((e) => e.type === "dry-run" && e.ok));
+
+  const radar = await (await fetch(`${base}/api/radar`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      deals: [{
+        id: "111",
+        title: "Hawas Rasasi 100ml",
+        url: "https://www.vinted.fr/items/111",
+        price: 18,
+        net: 27,
+        score: "A",
+        brand: "Hawas",
+        flags: []
+      }]
+    })
+  })).json();
+  assert.equal(radar.ok, true);
+  assert.equal(radar.inbox[0].score, "A");
 });

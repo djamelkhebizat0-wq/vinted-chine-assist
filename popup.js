@@ -39,6 +39,37 @@ async function refreshAutoCard() {
   return st;
 }
 
+async function refreshRadarCard() {
+  const st = await chrome.runtime.sendMessage({ type: "VCA_RADAR_STATUS" });
+  const ul = document.getElementById("radarInbox");
+  const hint = document.getElementById("radarHint");
+  const dot = document.getElementById("radarDot");
+  if (!ul) return st;
+  const inbox = st?.inbox || [];
+  ul.innerHTML = "";
+  inbox.slice(0, 8).forEach((d) => {
+    const li = document.createElement("li");
+    li.className = "score-" + (d.score || "C");
+    li.textContent = `${d.score} · ${VCA.formatEuro(d.price)} € · ${(d.title || "").slice(0, 36)}`;
+    li.title = d.url || "";
+    li.style.cursor = d.url ? "pointer" : "default";
+    if (d.url) {
+      li.addEventListener("click", () => chrome.tabs.create({ url: d.url }));
+    }
+    ul.appendChild(li);
+  });
+  if (!inbox.length) ul.innerHTML = "<li>Aucune affaire scorée. Scanner une recherche Vinted.</li>";
+  const unread = Number(st?.unread) || 0;
+  if (dot) dot.className = "dot " + (unread > 0 ? "on" : (st?.enabled === false ? "off" : "on"));
+  if (hint) {
+    hint.textContent = unread
+      ? `${unread} nouvelle(s) A — pastille icône (sans son).`
+      : (st?.enabled === false ? "Radar OFF dans les paramètres." : "Score A → pastille + notif silencieuse.");
+  }
+  if (unread) await chrome.runtime.sendMessage({ type: "VCA_RADAR_MARK_READ" });
+  return st;
+}
+
 async function refreshCloudCard() {
   const all = await VCA.loadAll();
   const dot = document.getElementById("cloudDot");
@@ -98,7 +129,22 @@ async function load() {
 
   await refreshAutoCard();
   await refreshCloudCard();
+  await refreshRadarCard();
 
+  document.getElementById("btnRadarOpts")?.addEventListener("click", () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL("options.html?tab=radar") });
+  });
+  document.getElementById("btnRadarScan")?.addEventListener("click", async () => {
+    const hint = document.getElementById("radarHint");
+    if (hint) hint.textContent = "Scan…";
+    const res = await chrome.runtime.sendMessage({ type: "VCA_RADAR_SCAN" });
+    await refreshRadarCard();
+    if (hint) {
+      hint.textContent = res?.ok
+        ? `${res.scored || 0} scorée(s) · ${res.alerts || 0} A`
+        : (res?.skipped === "off" ? "Radar désactivé." : "Ouvrez vinted.fr / une recherche.");
+    }
+  });
   document.getElementById("btnCloud")?.addEventListener("click", () => {
     chrome.tabs.create({ url: chrome.runtime.getURL("options.html?tab=cloud") });
   });

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Vinted Chine Assist",
-  "version": "1.3.0",
-  "description": "Assistant vendeur Vinted (usage personnel) : négo locale, Mode auto, prototype Cloud 24/7 opt-in — sans API officielle.",
+  "version": "1.4.0",
+  "description": "Assistant vendeur Vinted (usage personnel) : négo, Mode auto, Cloud 24/7, Radar bonnes affaires — sans API officielle.",
   "minimum_chrome_version": "114",
   "permissions": [
     "storage",
@@ -43,7 +43,7 @@
         "https://www.vinted.fr/*",
         "https://www.vinted.com/*"
       ],
-      "js": ["lib/shared.js", "lib/nego.js", "lib/guard.js", "content.js", "content-auto.js"],
+      "js": ["lib/shared.js", "lib/nego.js", "lib/guard.js", "lib/radar.js", "content.js", "content-auto.js", "content-radar.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
     }

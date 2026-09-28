@@ -235,6 +235,19 @@ body {
 .cloud-pill.disconnected { background: #eee8dc; color: #8a5a12; }
 .cloud-pill.error { background: #fdeeee; color: #c23b3b; }
 
+.score-pill {
+  display: inline-block;
+  min-width: 22px;
+  text-align: center;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 6px;
+}
+.score-pill.A { background: #d8f5ea; color: #0b7a4b; }
+.score-pill.B { background: #eee8dc; color: #8a5a12; }
+.score-pill.C { background: #fdeeee; color: #c23b3b; }
+
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
   .nav { height: auto; position: relative; }

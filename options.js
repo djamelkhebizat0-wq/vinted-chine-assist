@@ -10,6 +10,7 @@ const TITLES = {
   colis: "Étiquettes & colis",
   sav: "Post-vente",
   planif: "Comptes & planif",
+  radar: "Radar",
   cloud: "Cloud & mobile"
 };
 
@@ -70,6 +71,9 @@ function readSettingsFromForm() {
   s.cloudUrl = (document.getElementById("cloudUrl")?.value || "").trim().replace(/\/$/, "");
   s.cloudToken = (document.getElementById("cloudToken")?.value || "").trim();
   s.cloudEnabled = !!(document.getElementById("cloudEnabled")?.checked);
+  s.radarEnabled = document.getElementById("radarEnabled") ? !!document.getElementById("radarEnabled").checked : true;
+  s.radarIntervalMinutes = Math.max(30, Math.min(60, num("radarIntervalMinutes") || 45));
+  s.radarMinMarginEur = Math.max(0, num("radarMinMarginEur") || 10);
 }
 
 function fillSettingsForm() {
@@ -107,6 +111,10 @@ function fillSettingsForm() {
   set("cloudToken", s.cloudToken || "");
   const cloudEn = document.getElementById("cloudEnabled");
   if (cloudEn) cloudEn.checked = !!s.cloudEnabled;
+  const radEn = document.getElementById("radarEnabled");
+  if (radEn) radEn.checked = s.radarEnabled !== false;
+  set("radarIntervalMinutes", s.radarIntervalMinutes ?? 45);
+  set("radarMinMarginEur", s.radarMinMarginEur ?? 10);
 }
 
 function renderKpis() {
@@ -416,6 +424,65 @@ function renderSched() {
   });
 }
 
+function renderRadar() {
+  const list = document.getElementById("radarQueryList");
+  const inboxEl = document.getElementById("radarInboxBox");
+  if (!list) return;
+  if (!Array.isArray(state.radarQueries) || !state.radarQueries.length) {
+    state.radarQueries = VCA.migrateRadarQueries(null);
+  }
+  list.innerHTML = "";
+  state.radarQueries.forEach((q, index) => {
+    const row = document.createElement("div");
+    row.className = "card-row";
+    row.innerHTML = `
+      <label class="check" style="margin:0"><input type="checkbox" data-k="enabled" ${q.enabled !== false ? "checked" : ""} /></label>
+      <input data-k="query" value="${VCA.esc(q.query)}" placeholder="Recherche" style="flex:1.2" />
+      <input data-k="buyMax" type="number" step="1" value="${q.buyMax ?? 0}" title="Achat max" style="width:72px" />
+      <input data-k="resale" type="number" step="1" value="${q.resale ?? 0}" title="Revente" style="width:72px" />
+      <input data-k="minMargin" type="number" step="1" value="${q.minMargin ?? 10}" title="Marge mini" style="width:64px" />
+      <select data-k="category" style="width:96px">
+        <option value="parfum" ${q.category !== "vetement" ? "selected" : ""}>Parfum</option>
+        <option value="vetement" ${q.category === "vetement" ? "selected" : ""}>Vêtement</option>
+      </select>`;
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "btn danger";
+    del.textContent = "×";
+    del.addEventListener("click", () => {
+      state.radarQueries.splice(index, 1);
+      renderRadar();
+    });
+    row.appendChild(del);
+    row.querySelectorAll("[data-k]").forEach((inp) => {
+      inp.addEventListener("change", () => {
+        const k = inp.dataset.k;
+        if (k === "enabled") q.enabled = inp.checked;
+        else if (k === "category") q.category = inp.value;
+        else if (["buyMax", "resale", "minMargin"].includes(k)) q[k] = Number(inp.value) || 0;
+        else q[k] = inp.value;
+      });
+    });
+    list.appendChild(row);
+  });
+  if (!inboxEl) return;
+  const inbox = state.radarInbox || [];
+  if (!inbox.length) {
+    inboxEl.innerHTML = '<p class="desc">Aucune affaire scorée pour l’instant. Scanner maintenant sur une recherche Vinted.</p>';
+    return;
+  }
+  inboxEl.innerHTML = "";
+  inbox.slice(0, 30).forEach((d) => {
+    const row = document.createElement("div");
+    row.className = "card-row";
+    const flags = (d.flags || []).join(", ");
+    row.innerHTML = `<span class="score-pill ${VCA.esc(d.score || "C")}">${VCA.esc(d.score || "?")}</span>
+      <span style="flex:1"><a href="${VCA.esc(d.url || "#")}" target="_blank" rel="noopener">${VCA.esc(d.title || d.id)}</a>
+      · ${VCA.formatEuro(d.price)} € · marge ~${VCA.formatEuro(d.net)} € ${flags ? "· " + VCA.esc(flags) : ""}</span>`;
+    inboxEl.appendChild(row);
+  });
+}
+
 function renderAll() {
   fillSettingsForm();
   renderKpis();
@@ -429,6 +496,7 @@ function renderAll() {
   renderProfiles();
   renderSched();
   renderAutoLog();
+  renderRadar();
   renderCloudPanel({ skipFetch: true });
 }
 
@@ -557,7 +625,8 @@ async function persist() {
     [VCA.KEYS.profiles]: state.profiles,
     [VCA.KEYS.activeProfile]: state.activeProfileId,
     [VCA.KEYS.schedule]: state.schedule,
-    [VCA.KEYS.postsale]: state.postsale
+    [VCA.KEYS.postsale]: state.postsale,
+    [VCA.KEYS.radarQueries]: state.radarQueries
   });
 }
 
@@ -701,7 +770,8 @@ document.getElementById("btnCloudSyncRules")?.addEventListener("click", async ()
       settings: state.settings,
       templates: state.templates,
       repost: state.repost,
-      postsale: state.postsale
+      postsale: state.postsale,
+      radarQueries: state.radarQueries
     }
   });
   showToast(res.ok ? "Règles envoyées" : (res.error || "Échec sync"), !!res.ok);
@@ -788,6 +858,44 @@ document.getElementById("cloudEnabled")?.addEventListener("change", async (ev) =
   }
   await persistCloudSettings();
   await renderCloudPanel();
+});
+
+document.getElementById("btnRadarAdd")?.addEventListener("click", () => {
+  state.radarQueries = state.radarQueries || [];
+  state.radarQueries.push({
+    id: VCA.uid("rq"),
+    query: "Nouvelle recherche",
+    brand: "",
+    buyMax: 20,
+    resale: 35,
+    minMargin: 10,
+    category: "parfum",
+    enabled: true
+  });
+  renderRadar();
+});
+
+document.getElementById("btnRadarReset")?.addEventListener("click", async () => {
+  if (!confirm("Remettre LVEB / Libre / Black Opium / Sauvage / 1 Million / Khamrah / Hawas / Asad + Nike Adidas Lacoste Levi’s ?")) return;
+  state.radarQueries = VCA.migrateRadarQueries(null);
+  await persist();
+  renderRadar();
+  showToast("Pile Djamel restaurée");
+});
+
+document.getElementById("btnRadarScan")?.addEventListener("click", async () => {
+  await persist();
+  const hint = document.getElementById("radarScanHint");
+  if (hint) hint.textContent = "Scan en cours…";
+  const res = await chrome.runtime.sendMessage({ type: "VCA_RADAR_SCAN", openQuery: true });
+  state = await VCA.loadAll();
+  renderRadar();
+  showToast(res?.ok ? `${res.scored || 0} scorée(s), ${res.alerts || 0} alerte(s) A` : (res?.skipped || "Échec scan"), !!res?.ok);
+  if (hint) {
+    hint.textContent = res?.ok
+      ? `Dernier scan : ${res.cards || 0} cartes, ${res.scored || 0} scorées, ${res.alerts || 0} A.`
+      : (res?.skipped === "off" ? "Radar désactivé." : "Scan incomplet — ouvrez une recherche Vinted.");
+  }
 });
 
 async function init() {

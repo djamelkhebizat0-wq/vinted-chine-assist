@@ -1,4 +1,4 @@
-# Vinted Chine Assist 1.3.0
+# Vinted Chine Assist 1.4.0
 
 Extension Chrome **Manifest V3** pour **vinted.fr** (et vinted.com) : aide vendeur **locale**, usage **personnel**, plus un **prototype Cloud 24/7** optionnel (`cloud/`).
 
@@ -28,6 +28,22 @@ Automatiser des messages, des contre-offres ou des republications **peut violer 
 Garde-fous : délai 60 s, 40 messages/jour, 20 reposts/jour, cooldown 90 min/conversation, pas d’achat auto, pas d’acceptation sous achat + marge, modèle vide = pas d’envoi.
 
 Si le **Cloud** est activé, ce Mode auto local **n’envoie plus** (XOR).
+
+## Radar bonnes affaires (1.4)
+
+Surveille des recherches Vinted FR (pile préremplie Djamel : **LVEB, Libre, Black Opium, Sauvage, 1 Million, Khamrah, Hawas, Asad** + **Nike / Adidas / Lacoste / Levi’s**).
+
+**Pas d’API officielle.** Faux positifs possibles. Chrome ouvert (alarme 30–60 min) **ou** worker cloud. Cosmétiques : pas de tester / contrefaçon — le Radar les met en drapeau.
+
+### Utiliser
+
+1. Load unpacked (toujours `manifest.json` à la racine)
+2. Popup → **Scanner maintenant** (idéalement sur une page catalogue `/catalog?search_text=…`)
+3. Ou Paramètres → **Radar** : achat max, revente estimée, marge mini (défaut **10 €**), intervalle
+4. Score **A** → notification **silencieuse** + **pastille** sur l’icône (compteur). B/C restent dans la boîte (50 max)
+5. Déjà vu : nouvelle alerte seulement si le **prix baisse ≥ 5 €**
+
+Veille auto : alarme Chrome tant que le navigateur tourne. Cloud (optionnel) : `POST /api/radar` + poll Playwright d’une requête par tick.
 
 ## Cloud 24/7 (prototype 1.3)
 
@@ -130,6 +146,7 @@ Le dépôt ne peut pas se connecter à votre compte. Chez vous :
 | 8 | Planif | Local | — |
 | 9 | Cloud 24/7 | Pont honnête | Worker Docker / Fly |
 | 10 | Mobile natif | Non | Non |
+| 11 | Radar | Scan + alarme Chrome | POST /api/radar + poll |
 
 ## Tests
 
@@ -141,8 +158,8 @@ cd cloud && npm install && npm test
 ## Fichiers
 
 - `manifest.json` — MV3 (racine, Load unpacked)
-- `lib/shared.js` `lib/nego.js` `lib/guard.js` `lib/cloud.js`
-- `background.js` `content.js` `content-auto.js`
+- `lib/shared.js` `lib/nego.js` `lib/guard.js` `lib/cloud.js` `lib/radar.js`
+- `background.js` `content.js` `content-auto.js` `content-radar.js`
 - `options.*` `popup.*` `crm.*` `packing-slip.*`
 - `cloud/` — worker, Docker, Fly, tests
 - `docs/ARCHITECTURE-CLOUD.md`

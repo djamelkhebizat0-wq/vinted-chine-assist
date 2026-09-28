@@ -1,6 +1,6 @@
 # Architecture Cloud 24/7 — ce qui existe en 1.3.0
 
-Depuis **1.3.0**, le dépôt contient un **prototype** de worker Node (`cloud/`) + un pont dans l’extension (onglet **Cloud**). Ce n’est **pas** une API officielle Vinted. L’UI ne passe au vert **que** si `GET /health` répond `ok`.
+Depuis **1.4.0**, un **Radar** peut poster des deals scorés sur `POST /api/radar` et le worker peut parcourir une recherche catalogue par tick (HTTP puis Playwright). Toujours **pas** d’API officielle Vinted.
 
 Le **Mode auto local** (1.2.0) reste disponible : Chrome ouvert, sans serveur. Si le Cloud est activé, le Mode auto local **n’envoie plus** (XOR, doubles envois).
 

@@ -11,9 +11,23 @@
     <div class="logo" aria-hidden="true"></div>
     <div>
       <h1>Vinted Chine Assist</h1>
-      <p class="sub">v1.3.0 · local + cloud proto</p>
+      <p class="sub">v1.4.0 · radar + cloud proto</p>
     </div>
   </header>
+
+  <section class="card radar">
+    <div class="row between">
+      <strong>Radar</strong>
+      <span class="dot" id="radarDot"></span>
+    </div>
+    <p class="hint">Chrome ouvert (ou cloud). Pas d’API officielle · faux positifs possibles.</p>
+    <button type="button" class="btn primary btn-scan" id="btnRadarScan">Scanner maintenant</button>
+    <p class="hint" id="radarHint">Score A uniquement en notification (silencieuse) + pastille.</p>
+    <ul class="log" id="radarInbox"></ul>
+    <nav class="actions">
+      <button type="button" class="btn ghost" id="btnRadarOpts">Réglages Radar…</button>
+    </nav>
+  </section>
 
   <section class="card auto">
     <div class="row between">
@@ -77,6 +91,7 @@
   </footer>
   <script src="lib/shared.js"></script>
   <script src="lib/guard.js"></script>
+  <script src="lib/radar.js"></script>
   <script src="lib/cloud.js"></script>
   <script src="popup.js"></script>
 </body>

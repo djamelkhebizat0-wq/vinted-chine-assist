@@ -27,12 +27,16 @@ function empty() {
         relance: []
       },
       repost: [],
-      postsale: []
+      postsale: [],
+      radarQueries: []
     },
     session: null,
     guardState: emptyAutoState(),
     log: [],
     dryRunQueue: [],
+    radarInbox: [],
+    radarSeen: {},
+    radarCursor: 0,
     lastTick: null,
     lastError: ""
   };

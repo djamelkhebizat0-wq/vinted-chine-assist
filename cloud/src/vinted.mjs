@@ -221,3 +221,62 @@ export async function playwrightRepost(session, itemUrl) {
     return { ok: false, error: "no-repost-control" };
   });
 }
+
+export async function httpCatalog(session, searchText) {
+  const origin = originOf(session);
+  const ua = session.userAgent || "Mozilla/5.0";
+  const url = `${origin}/api/v2/catalog/items?search_text=${encodeURIComponent(searchText || "")}&per_page=24&order=newest_first`;
+  const res = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      Cookie: cookieHeader(session.cookies),
+      "User-Agent": ua,
+      "X-Requested-With": "XMLHttpRequest"
+    }
+  });
+  const text = await res.text();
+  let data = null;
+  try { data = JSON.parse(text); } catch { /* ignore */ }
+  const items = data?.items || data?.catalog_items || [];
+  const cards = (Array.isArray(items) ? items : []).map((it) => ({
+    id: String(it.id || it.item_id || ""),
+    url: it.url || (it.id ? `${origin}/items/${it.id}` : ""),
+    title: it.title || it.name || "",
+    price: parseMoneyLoose(it.price) ?? parseMoneyLoose(it.price_numeric),
+    raw: `${it.title || ""} ${it.description || ""}`.slice(0, 280),
+    sellerNew: Number(it.user?.feedback_count || it.user?.positive_feedback_count) === 0
+  })).filter((c) => c.id);
+  return { ok: res.ok, status: res.status, mode: "http", cards };
+}
+
+export async function playwrightCatalog(session, searchUrl) {
+  return playwrightAction(session, async (page) => {
+    await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 45000 });
+    const loggedOut = /se connecter|log in/i.test((await page.locator("body").innerText()).slice(0, 400));
+    if (loggedOut) return { ok: false, status: 401, mode: "playwright", cards: [] };
+    const cards = await page.evaluate(() => {
+      const links = [...document.querySelectorAll('a[href*="/items/"]')];
+      const seen = new Set();
+      const out = [];
+      for (const a of links) {
+        const m = (a.href || "").match(/\/items\/(\d+)/);
+        if (!m || seen.has(m[1])) continue;
+        seen.add(m[1]);
+        const card = a.closest("article, li, [data-testid*='item']") || a.parentElement;
+        const text = ((card && card.innerText) || "").replace(/\s+/g, " ").slice(0, 280);
+        const img = card && card.querySelector && card.querySelector("img");
+        const pm = text.match(/(\d+[.,]\d+|\d+)\s*€/);
+        out.push({
+          id: m[1],
+          url: a.href.split("?")[0],
+          title: String((img && img.alt) || a.innerText || "").slice(0, 180),
+          price: pm ? pm[1] : null,
+          raw: text,
+          sellerNew: /0 avis|nouveau/i.test(text)
+        });
+      }
+      return out.slice(0, 40);
+    });
+    return { ok: true, mode: "playwright", cards };
+  });
+}

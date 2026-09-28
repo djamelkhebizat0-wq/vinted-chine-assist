@@ -592,6 +592,7 @@
           <button type="button" class="vca-tab" data-tab="colis">Colis</button>
           <button type="button" class="vca-tab" data-tab="sav">SAV</button>
           <button type="button" class="vca-tab" data-tab="planif">Planif</button>
+          <button type="button" class="vca-tab" data-tab="radar">Radar</button>
           <button type="button" class="vca-tab" data-tab="cloud">Cloud</button>
         </div>
         <div class="vca-body">
@@ -696,6 +697,15 @@
             <div id="vca-sched-list"></div>
             <button type="button" class="vca-link" id="vca-open-planif">Gérer planification</button>
           </div>
+          <div class="vca-pane" data-pane="radar">
+            <button type="button" class="vca-btn" id="vca-radar-scan">
+              <strong>Scanner maintenant</strong>
+              <span>Cartes visibles + recherches surveillées</span>
+            </button>
+            <div id="vca-radar-list"></div>
+            <p class="vca-hint">Chrome ouvert (ou cloud). Pas d’API officielle. Faux positifs possibles. Parfums : pas de tester / contrefaçon.</p>
+            <button type="button" class="vca-link" id="vca-open-radar">Paramètres → Radar</button>
+          </div>
           <div class="vca-pane" data-pane="cloud">
             <div class="vca-banner">
               <strong id="vca-cloud-title">Cloud 24/7 (prototype)</strong>
@@ -780,6 +790,15 @@
     });
     root.querySelector("#vca-open-cloud").addEventListener("click", () => {
       chrome.runtime.sendMessage({ type: "VCA_OPEN_PAGE", page: "options", query: "tab=cloud" });
+    });
+    root.querySelector("#vca-open-radar").addEventListener("click", () => {
+      chrome.runtime.sendMessage({ type: "VCA_OPEN_PAGE", page: "options", query: "tab=radar" });
+    });
+    root.querySelector("#vca-radar-scan").addEventListener("click", async () => {
+      toast("Scan Radar…");
+      const res = await chrome.runtime.sendMessage({ type: "VCA_RADAR_SCAN" });
+      toast(res?.ok ? `${res.scored || 0} scorée(s) · ${res.alerts || 0} A` : "Scan incomplet");
+      refreshRadarUI();
     });
 
     root.querySelector("#vca-repost-add").addEventListener("click", async () => {
@@ -955,9 +974,25 @@
     refreshItemTplUI();
     refreshProfilesSelect();
     refreshAutoBanner();
+    refreshRadarUI();
     if (root?.querySelector("#vca-cost") && settings.costPrice) {
       root.querySelector("#vca-cost").value = String(settings.costPrice);
     }
+  }
+
+  function refreshRadarUI() {
+    const box = root?.querySelector("#vca-radar-list");
+    if (!box) return;
+    chrome.runtime.sendMessage({ type: "VCA_RADAR_STATUS" }, (st) => {
+      const inbox = st?.inbox || [];
+      if (!inbox.length) {
+        box.innerHTML = '<p class="vca-hint">Aucune affaire. Ouvrez une recherche catalogue puis Scanner.</p>';
+        return;
+      }
+      box.innerHTML = inbox.slice(0, 8).map((d) =>
+        `<div class="vca-mini">${VCA.esc(d.score)} · ${VCA.formatEuro(d.price)} € · ${VCA.esc((d.title || "").slice(0, 42))}</div>`
+      ).join("");
+    });
   }
 
   function onOpen() {

@@ -19,8 +19,19 @@ import {
   playwrightInbox,
   playwrightReply,
   playwrightRepost,
-  parseInboxConversations
+  parseInboxConversations,
+  httpCatalog,
+  playwrightCatalog,
+  parseMoneyLoose
 } from "./vinted.mjs";
+import {
+  scoreRadarDeal,
+  migrateRadarQueries,
+  radarSearchUrl,
+  radarShouldAlert,
+  radarMarkSeen,
+  radarMergeInbox
+} from "../shared/radar.mjs";
 
 export function workerSettings(state) {
   const s = { ...(state.config?.settings || {}) };
@@ -276,6 +287,57 @@ async function processPostsale(state, sess, settings) {
   }
 }
 
+async function processRadar(state, sess, settings) {
+  if (settings.radarEnabled === false) return;
+  const queries = migrateRadarQueries(state.config?.radarQueries);
+  const enabled = queries.filter((q) => q.enabled !== false);
+  if (!enabled.length) return;
+  const idx = Number(state.radarCursor) || 0;
+  const q = enabled[idx % enabled.length];
+  state.radarCursor = (idx + 1) % enabled.length;
+  const origin = sess.origin || process.env.VINTED_ORIGIN || "https://www.vinted.fr";
+  let cards = [];
+  try {
+    const http = await httpCatalog(sess, q.query);
+    if (http.ok && http.cards?.length) cards = http.cards;
+    else {
+      const pw = await playwrightCatalog(sess, radarSearchUrl(q.query, origin));
+      if (pw.ok) cards = pw.cards || [];
+    }
+  } catch (err) {
+    log(state, { type: "radar", ok: false, error: String(err.message || err) });
+    return;
+  }
+  const seen = state.radarSeen || {};
+  const scored = [];
+  for (const card of cards) {
+    const listing = {
+      ...card,
+      price: parseMoneyLoose(card.price) ?? card.price,
+      queryId: q.id
+    };
+    const s = scoreRadarDeal(listing, queries, settings);
+    if (!s.ok) continue;
+    const deal = { ...s, title: listing.title, url: listing.url, ts: new Date().toISOString() };
+    scored.push(deal);
+    const alert = radarShouldAlert(seen, listing, deal);
+    radarMarkSeen(seen, listing, deal, alert);
+    if (alert) {
+      log(state, {
+        type: "radar",
+        ok: true,
+        target: deal.url,
+        detail: `A ${deal.brand} ${deal.price} € marge ${deal.net}`
+      });
+    }
+  }
+  state.radarSeen = seen;
+  state.radarInbox = radarMergeInbox(state.radarInbox, scored);
+  if (scored.length) {
+    log(state, { type: "radar", ok: true, detail: `${q.query} · ${scored.length} scorée(s)` });
+  }
+}
+
 export async function runTick() {
   const state = loadState();
   state.lastTick = new Date().toISOString();
@@ -310,6 +372,7 @@ export async function runTick() {
     await processLiveInbox(state, sess, settings);
     await processRepost(state, sess, settings);
     await processPostsale(state, sess, settings);
+    await processRadar(state, sess, settings);
   } catch (err) {
     state.lastError = String(err.message || err);
     log(state, { type: "system", ok: false, error: state.lastError });
