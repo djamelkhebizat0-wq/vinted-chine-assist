@@ -271,6 +271,19 @@ async function tickInboxTabs() {
           res: await pingTab(opened.id, { type: "VCA_AUTO_SEND_NEGO" })
         });
       }
+    } else if (settings.autoFavSend && res?.favHrefs?.length) {
+      const href = res.favHrefs[0];
+      const existing = tabs.find((t) => t.url && href && t.url.split("?")[0] === href.split("?")[0]);
+      if (!existing) {
+        const opened = await chrome.tabs.create({ url: href, active: false });
+        await waitTabComplete(opened.id, 12000);
+        await new Promise((r) => setTimeout(r, 1200));
+        results.push({
+          tabId: opened.id,
+          url: href,
+          res: await pingTab(opened.id, { type: "VCA_AUTO_SEND_FAV" })
+        });
+      }
     }
   }
   return { ok: true, results };
@@ -650,6 +663,31 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     setModeAuto(!!msg.on).then(sendResponse);
     return true;
   }
+  if (type === "VCA_SET_AUTO_FAV") {
+    (async () => {
+      const all = await VCA.loadAll();
+      all.settings.autoFavSend = !!msg.on;
+      await VCA.storageSet({ [VCA.KEYS.settings]: all.settings });
+      sendResponse({ ok: true, autoFavSend: !!msg.on, modeAuto: VCA.localAutoActive(all.settings) });
+    })();
+    return true;
+  }
+  if (type === "VCA_FAV_SENT") {
+    (async () => {
+      const all = await VCA.loadAll();
+      const map = VCA.markFavSent(all.favSent, msg.key);
+      await VCA.storageSet({ [VCA.KEYS.favSent]: map });
+      await writeLog({
+        type: "favoris",
+        target: msg.target || msg.key || "",
+        ok: !!msg.ok,
+        error: msg.error || "",
+        detail: msg.detail || ""
+      });
+      sendResponse({ ok: true });
+    })();
+    return true;
+  }
   if (type === "VCA_KILL_AUTO") {
     setModeAuto(false).then(sendResponse);
     return true;
@@ -671,10 +709,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         modeAuto: VCA.localAutoActive(all.settings),
         cloudEnabled: !!all.settings.cloudEnabled,
         cloudUrl: all.settings.cloudUrl || "",
+        autoFavSend: !!all.settings.autoFavSend,
         settings: {
           autoDailyMessageCap: all.settings.autoDailyMessageCap,
           autoDailyRepostCap: all.settings.autoDailyRepostCap,
-          autoMinDelaySeconds: all.settings.autoMinDelaySeconds
+          autoMinDelaySeconds: all.settings.autoMinDelaySeconds,
+          autoFavSend: !!all.settings.autoFavSend
         },
         state: g.state,
         log: g.log.slice(0, 12)

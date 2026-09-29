@@ -27,7 +27,8 @@
     itemEdit: /\/items\/\d+\/edit/i,
     item: /\/items\/\d+/i,
     wardrobe: /(wardrobe|closet|\/member\/.+\/items|\/items\/saved)/i,
-    orders: /(order|shipping|parcel|label|ventes|sold_items|my_orders)/i
+    orders: /(order|shipping|parcel|label|ventes|sold_items|my_orders)/i,
+    favorites: /(favori|favourite|favorite|notifications?)/i
   };
 
   function pageKind() {
@@ -37,6 +38,7 @@
     if (PAGE.item.test(p)) return "item";
     if (PAGE.orders.test(p)) return "orders";
     if (PAGE.wardrobe.test(p)) return "wardrobe";
+    if (PAGE.favorites.test(p + " " + (location.search || ""))) return "favorites";
     return "other";
   }
 

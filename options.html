@@ -13,7 +13,7 @@
         <div class="logo" aria-hidden="true"></div>
         <div>
           <h1>Vinted Chine Assist</h1>
-          <p>v1.5.2 · local + cloud + radar · personnel</p>
+          <p>v1.6.0 · local + cloud + radar · personnel</p>
         </div>
       </div>
       <nav>
@@ -81,7 +81,7 @@
       <section class="panel tab" data-tab="auto">
         <div class="banner">
           <h3>Mode auto (Chrome ouvert uniquement)</h3>
-          <p>Par défaut <strong>OFF</strong>. Une fois activé (popup ou ici), l’extension <strong>envoie</strong> les réponses négo, exécute le repost en file, et envoie le post-vente — dans les plafonds. STOP immédiat = tout couper.</p>
+          <p>Par défaut <strong>OFF</strong>. Une fois activé (popup ou ici), l’extension <strong>envoie</strong> les réponses négo, les messages favoris (si le switch Favoris est ON), exécute le repost en file, et envoie le post-vente — dans les plafonds. STOP immédiat = tout couper.</p>
         </div>
         <label class="check">
           <input type="checkbox" id="modeAuto" />
@@ -98,6 +98,13 @@
         <label class="check">
           <input type="checkbox" id="autoPostSaleSend" checked />
           <span>Post-vente : envoyer merci / avis automatiquement</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="autoFavSend" />
+          <span>Favoris : envoyer le modèle tout seul (mêmes plafonds que la négo, défaut OFF)</span>
+        </label>
+        <label class="field mt"><span>Modèle Favoris auto</span>
+          <select id="autoFavTemplateId"></select>
         </label>
         <div class="grid2 mt">
           <label class="field"><span>Délai mini entre envois (secondes)</span>

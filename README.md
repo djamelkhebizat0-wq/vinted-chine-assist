@@ -1,4 +1,4 @@
-# Vinted Chine Assist 1.5.2
+# Vinted Chine Assist 1.6.0
 
 Extension Chrome **Manifest V3** pour **vinted.fr** (et vinted.com) : aide vendeur **locale**, usage **personnel**, plus un **prototype Cloud 24/7** optionnel (`cloud/`).
 
@@ -26,6 +26,8 @@ Automatiser des messages, des contre-offres ou des republications **peut violer 
 **Par défaut OFF.** STOP immédiat coupe tout.
 
 Garde-fous : délai 60 s, 40 messages/jour, 20 reposts/jour, cooldown 90 min/conversation, pas d’achat auto, pas d’acceptation sous achat + marge, modèle vide = pas d’envoi.
+
+**Favoris auto (1.6, défaut OFF)** : switch dans le popup Mode auto et Paramètres → Mode auto. Envoie le premier modèle Favoris activé (ou celui choisi) sans clic de confirmation, mêmes caps. Jamais deux fois la même personne + le même article. Ignore tester / contrefaçon / Pro cosmétiques. Rien ne part si Mode auto est OFF ou si le Cloud XOR a pris la main.
 
 Si le **Cloud** est activé, ce Mode auto local **n’envoie plus** (XOR).
 
@@ -144,6 +146,7 @@ Le dépôt ne peut pas se connecter à votre compte. Chez vous :
 | # | Module | Local (Chrome) | Cloud proto |
 |---|--------|----------------|-------------|
 | 1 | Négo | Mode auto + insertion | Worker inbox + règles |
+| 1b | Favoris auto | Mode auto (OFF par défaut) | — |
 | 2 | Repost | Alarme / onglet | Playwright republier / save |
 | 3 | CRM | Local seulement | — |
 | 4 | Colis | Local seulement | Pas de webhooks print |

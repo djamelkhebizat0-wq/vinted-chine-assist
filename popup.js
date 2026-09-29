@@ -5,7 +5,7 @@ function renderLog(log) {
     const li = document.createElement("li");
     const t = (e.ts || "").replace("T", " ").slice(11, 19);
     li.className = e.ok ? "ok" : "err";
-    li.textContent = `${t} · ${e.type} · ${e.ok ? "ok" : (e.error || "échec")} ${e.target || ""}`;
+    li.textContent = `${t} · ${e.type} · ${e.ok ? "ok" : (e.error || "échec")}${e.detail ? " · " + e.detail : ""} ${e.target || ""}`;
     ul.appendChild(li);
   });
   if (!log?.length) {
@@ -28,13 +28,20 @@ async function refreshAutoCard() {
     btn.disabled = true;
   } else {
     hint.textContent = on
-      ? "Envoi réel actif (négo / repost / post-vente) tant que Chrome est ouvert."
+      ? (st?.autoFavSend
+        ? "Envoi réel (négo / favoris / repost / post-vente) tant que Chrome est ouvert."
+        : "Envoi réel actif (négo / repost / post-vente) tant que Chrome est ouvert.")
       : "Désactivé. Insertion manuelle uniquement — rien n’est envoyé tout seul.";
     btn.disabled = false;
   }
   const s = st?.state || {};
   const cap = st?.settings || {};
   caps.textContent = `Messages ${s.messagesSent || 0}/${cap.autoDailyMessageCap || 40} · Reposts ${s.repostsDone || 0}/${cap.autoDailyRepostCap || 20} · délai ${cap.autoMinDelaySeconds || 60}s`;
+  const fav = document.getElementById("autoFavSend");
+  if (fav) {
+    fav.checked = !!(st?.autoFavSend || cap.autoFavSend);
+    fav.disabled = !!st?.cloudEnabled;
+  }
   renderLog(st?.log);
   return st;
 }
@@ -174,11 +181,19 @@ async function load() {
       return;
     }
     const next = !cur?.modeAuto;
-    if (next && !confirm("Activer le Mode auto ? Les réponses / reposts / post-vente partiront seuls (caps + délai). Chrome doit rester ouvert.")) {
+    if (next && !confirm("Activer le Mode auto ? Les réponses / favoris (si le switch est ON) / reposts / post-vente partiront seuls (caps + délai). Chrome doit rester ouvert.")) {
       return;
     }
     await chrome.runtime.sendMessage({ type: "VCA_SET_MODE_AUTO", on: next });
     await refreshAutoCard();
+  });
+  document.getElementById("autoFavSend")?.addEventListener("change", async (ev) => {
+    const on = !!ev.target.checked;
+    await chrome.runtime.sendMessage({ type: "VCA_SET_AUTO_FAV", on });
+    await refreshAutoCard();
+    if (on) {
+      pageHint.textContent = "Favoris auto ON — le Mode auto doit aussi être ON, et une page inbox/favoris Vinted ouverte.";
+    }
   });
   document.getElementById("btnKill").addEventListener("click", async () => {
     await chrome.runtime.sendMessage({ type: "VCA_KILL_AUTO" });

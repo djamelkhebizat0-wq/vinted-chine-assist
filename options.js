@@ -55,6 +55,8 @@ function readSettingsFromForm() {
   s.autoNegoSend = document.getElementById("autoNegoSend").checked;
   s.autoRepostDo = document.getElementById("autoRepostDo").checked;
   s.autoPostSaleSend = document.getElementById("autoPostSaleSend").checked;
+  s.autoFavSend = !!document.getElementById("autoFavSend")?.checked;
+  s.autoFavTemplateId = (document.getElementById("autoFavTemplateId")?.value || "").trim();
   s.autoMinDelaySeconds = Math.max(15, num("autoMinDelaySeconds") || 60);
   s.autoDailyMessageCap = Math.max(1, num("autoDailyMessageCap") || 40);
   s.autoDailyRepostCap = Math.max(1, num("autoDailyRepostCap") || 20);
@@ -95,6 +97,9 @@ function fillSettingsForm() {
   document.getElementById("autoNegoSend").checked = s.autoNegoSend !== false;
   document.getElementById("autoRepostDo").checked = s.autoRepostDo !== false;
   document.getElementById("autoPostSaleSend").checked = s.autoPostSaleSend !== false;
+  const favSend = document.getElementById("autoFavSend");
+  if (favSend) favSend.checked = s.autoFavSend === true;
+  fillFavTemplateSelect();
   set("autoMinDelaySeconds", s.autoMinDelaySeconds ?? 60);
   set("autoDailyMessageCap", s.autoDailyMessageCap ?? 40);
   set("autoDailyRepostCap", s.autoDailyRepostCap ?? 20);
@@ -210,6 +215,21 @@ async function schedulePostsale(item) {
   showToast("Rappels post-vente planifiés");
 }
 
+function fillFavTemplateSelect() {
+  const sel = document.getElementById("autoFavTemplateId");
+  if (!sel) return;
+  const cur = state.settings.autoFavTemplateId || "";
+  const list = state.templates?.favoris || [];
+  sel.innerHTML = '<option value="">Premier modèle activé</option>';
+  list.forEach((t) => {
+    const opt = document.createElement("option");
+    opt.value = t.id || "";
+    opt.textContent = (t.enabled === false ? "(off) " : "") + (t.label || t.id || "Modèle");
+    sel.appendChild(opt);
+  });
+  sel.value = list.some((t) => t.id === cur) ? cur : "";
+}
+
 function renderMsgCats() {
   const root = document.getElementById("msgCats");
   root.innerHTML = "";
@@ -240,6 +260,17 @@ function renderMsgCats() {
       inp.type = "text";
       inp.value = item.label || "";
       inp.addEventListener("input", () => { item.label = inp.value; });
+      if (cat.id === "favoris") {
+        const en = document.createElement("label");
+        en.className = "check";
+        en.style.margin = "0";
+        en.innerHTML = `<input type="checkbox" ${item.enabled !== false ? "checked" : ""} /><span>Actif</span>`;
+        en.querySelector("input").addEventListener("change", (ev) => {
+          item.enabled = !!ev.target.checked;
+          fillFavTemplateSelect();
+        });
+        row.appendChild(en);
+      }
       const del = document.createElement("button");
       del.type = "button";
       del.className = "btn danger";
@@ -260,6 +291,7 @@ function renderMsgCats() {
     wrap.appendChild(list);
     root.appendChild(wrap);
   });
+  fillFavTemplateSelect();
 }
 
 function renderItemTpls() {

@@ -82,7 +82,8 @@ const settings = VCA.migrateSettings({ negotiationFloorPercent: 12, suggestCount
 assert(settings.maxDropPercent === 12 && settings.counterStepPercent === 6, "migrate old % settings");
 assert(settings.modeAuto === false, "mode auto default off");
 assert(settings.cloudEnabled === false, "cloud default off");
-assert(VCA.VERSION === "1.5.2", "version 1.5.2");
+assert(VCA.VERSION === "1.6.0", "version 1.6.0");
+assert(settings.autoFavSend === false, "fav auto default off");
 assert(VCA.localAutoActive({ modeAuto: true, cloudEnabled: false }) === true, "local auto when no cloud");
 assert(VCA.localAutoActive({ modeAuto: true, cloudEnabled: true }) === false, "XOR: cloud blocks local auto");
 
@@ -109,6 +110,34 @@ st.messagesSent = 0;
 st.repostsDone = 20;
 const gRep = VCA.guardCheck({ modeAuto: true, autoMinDelaySeconds: 60, autoDailyMessageCap: 40, autoDailyRepostCap: 20, autoConversationCooldownMinutes: 90 }, st, "repost", "");
 assert(gRep.ok === false && gRep.reason === "cap-repost", "daily repost cap");
+
+const tplPick = VCA.pickFavorisTemplate({
+  favoris: [
+    { id: "f0", enabled: false, text: "Bonjour {{nom}} ceci est assez long" },
+    { id: "f1", enabled: true, text: "Bonjour {{nom}} merci pour le favori !" }
+  ]
+}, {});
+assert(tplPick && tplPick.id === "f1", "pick first enabled favoris template");
+const tplId = VCA.pickFavorisTemplate({
+  favoris: [
+    { id: "f1", enabled: true, text: "Bonjour {{nom}} merci pour le favori !" },
+    { id: "f2", enabled: true, text: "Autre modele assez long oui" }
+  ]
+}, { autoFavTemplateId: "f2" });
+assert(tplId && tplId.id === "f2", "pick selected favoris template");
+assert(VCA.pickFavorisTemplate({ favoris: [{ id: "e", text: "ok" }] }, {}) == null, "empty favoris template skipped");
+assert(VCA.favoriteAutoBlocked("Sauvage tester 100ml") === "tester", "fav skip tester");
+assert(VCA.favoriteAutoBlocked("compte Pro cosmétiques") === "pro-cosmetics", "fav skip pro cosmetics");
+assert(VCA.favoriteAutoBlocked("Nike hoodie taille M") == null, "fav allow clothing");
+const favKey = VCA.favDedupeKey({ userId: "u1", itemId: "i9" });
+assert(favKey === "fav:u1:i9", "fav key person+item");
+let favMap = {};
+assert(VCA.wasFavSent(favMap, favKey) === false, "fav not sent yet");
+favMap = VCA.markFavSent(favMap, favKey);
+assert(VCA.wasFavSent(favMap, favKey) === true, "second pass does not send again");
+assert(VCA.localAutoActive({ modeAuto: true, autoFavSend: true, cloudEnabled: true }) === false, "XOR blocks fav auto too");
+const gFavOff = VCA.guardCheck({ modeAuto: false, autoMinDelaySeconds: 60, autoDailyMessageCap: 40 }, VCA.emptyAutoState(), "message", "fav1");
+assert(gFavOff.ok === false && gFavOff.reason === "mode-off", "fav uses same guard when mode off");
 
 assert(VCA.offerBelowMinMargin(16, { costPrice: 12, minMarginEur: 5 }) === true, "below min margin");
 assert(VCA.offerBelowMinMargin(18, { costPrice: 12, minMarginEur: 5 }) === false, "at min margin");
