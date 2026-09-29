@@ -1,9 +1,9 @@
 /**
- * Service worker MV3 — alarmes locales, Mode auto, pont cloud 1.3.0.
+ * Service worker MV3 — alarmes locales, Mode auto, pont cloud 1.3.0, Radar 1.4 + chat 1.5.
  * Le Mode auto local s'arrête si cloudEnabled (XOR). Le worker distant tourne sans Chrome.
  */
 /* global importScripts, VCA */
-importScripts("lib/shared.js", "lib/nego.js", "lib/guard.js", "lib/cloud.js", "lib/radar.js");
+importScripts("lib/shared.js", "lib/nego.js", "lib/guard.js", "lib/cloud.js", "lib/radar.js", "lib/radar-chat.js");
 
 const ALARM_REPOST = "vca-repost";
 const ALARM_INBOX = "vca-inbox-poll";
@@ -738,6 +738,65 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       updateBadge();
       sendResponse({ ok: true });
     });
+    return true;
+  }
+  if (type === "VCA_RADAR_CHAT_HISTORY") {
+    (async () => {
+      const all = await VCA.loadAll();
+      sendResponse({ ok: true, messages: all.radarChat || [] });
+    })();
+    return true;
+  }
+  if (type === "VCA_RADAR_CHAT") {
+    (async () => {
+      const all = await VCA.loadAll();
+      const text = String(msg.text || "").trim();
+      if (!text) {
+        sendResponse({ ok: false, error: "empty", messages: all.radarChat || [] });
+        return;
+      }
+      const turn = VCA.radarChatTurn(text, {
+        queries: all.radarQueries,
+        inbox: all.radarInbox,
+        seen: all.radarSeen,
+        pending: all.radarChatPending,
+        settings: all.settings
+      });
+      const patch = {
+        [VCA.KEYS.radarChatPending]: turn.pending || null
+      };
+      if (turn.mutated) patch[VCA.KEYS.radarQueries] = turn.queries;
+      let reply = turn.reply;
+      let scan = null;
+      if (turn.wantScan) {
+        let tabId = msg.tabId;
+        if (!tabId) {
+          try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tab?.id && /vinted\.(fr|com)/.test(tab.url || "")) tabId = tab.id;
+          } catch (_) { /* ignore */ }
+        }
+        scan = await runRadarScan({
+          tabId,
+          active: true,
+          openQuery: true,
+          fromAlarm: false
+        });
+        reply = VCA.radarChatScanFollowup(reply, scan);
+      }
+      const messages = VCA.radarChatAppend(all.radarChat, text, reply);
+      patch[VCA.KEYS.radarChat] = messages;
+      await VCA.storageSet(patch);
+      sendResponse({
+        ok: true,
+        reply,
+        messages,
+        mutated: !!turn.mutated,
+        wantScan: !!turn.wantScan,
+        scan,
+        queries: turn.queries
+      });
+    })();
     return true;
   }
   if (type === "VCA_AI_NEGO") {

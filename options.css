@@ -248,6 +248,34 @@ body {
 .score-pill.B { background: #eee8dc; color: #8a5a12; }
 .score-pill.C { background: #fdeeee; color: #c23b3b; }
 
+.chat { margin: 8px 0 14px; }
+.chat-log {
+  max-height: 220px;
+  overflow: auto;
+  background: #f3f8f7;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.chat-msg {
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  margin: 6px 0;
+}
+.chat-msg.me { color: var(--teal-dark); font-weight: 600; }
+.chat-msg.bot { color: var(--muted); }
+.chat-row { display: flex; gap: 8px; }
+.chat-row input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
   .nav { height: auto; position: relative; }

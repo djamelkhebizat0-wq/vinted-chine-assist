@@ -131,6 +131,15 @@ async function load() {
   await refreshCloudCard();
   await refreshRadarCard();
 
+  VCA.bindRadarChat({
+    log: document.getElementById("radarChatLog"),
+    input: document.getElementById("radarChatInput"),
+    send: document.getElementById("radarChatSend"),
+    onResult: async (res) => {
+      if (res?.wantScan || res?.mutated) await refreshRadarCard();
+    }
+  });
+
   document.getElementById("btnRadarOpts")?.addEventListener("click", () => {
     chrome.tabs.create({ url: chrome.runtime.getURL("options.html?tab=radar") });
   });

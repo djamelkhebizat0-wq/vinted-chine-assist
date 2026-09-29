@@ -1,4 +1,4 @@
-# Vinted Chine Assist 1.4.0
+# Vinted Chine Assist 1.5.0
 
 Extension Chrome **Manifest V3** pour **vinted.fr** (et vinted.com) : aide vendeur **locale**, usage **personnel**, plus un **prototype Cloud 24/7** optionnel (`cloud/`).
 
@@ -44,6 +44,12 @@ Surveille des recherches Vinted FR (pile préremplie Djamel : **LVEB, Libre, Bla
 5. Déjà vu : nouvelle alerte seulement si le **prix baisse ≥ 5 €**
 
 Veille auto : alarme Chrome tant que le navigateur tourne. Cloud (optionnel) : `POST /api/radar` + poll Playwright d’une requête par tick.
+
+## Chat Radar (1.5)
+
+Dans le **popup** (carte Radar) ou **Paramètres → Radar** : un champ pour parler au Radar.
+
+**Pas de compte, pas d’IA externe, pas de clé API.** Le cerveau est local : scores A/B/C, pourquoi un article est sauté, pile (achat max / revente / marge), activer/désactiver, « mets Lacoste à 15 », « revente Nike 40 », « scanner », « derniers deals ». Phrase floue → une question. Jamais de prix Vinted inventés, jamais « authentique ».
 
 ## Cloud 24/7 (prototype 1.3)
 
@@ -147,6 +153,7 @@ Le dépôt ne peut pas se connecter à votre compte. Chez vous :
 | 9 | Cloud 24/7 | Pont honnête | Worker Docker / Fly |
 | 10 | Mobile natif | Non | Non |
 | 11 | Radar | Scan + alarme Chrome | POST /api/radar + poll |
+| 12 | Chat Radar | Popup + Options, local | — |
 
 ## Tests
 
@@ -158,7 +165,7 @@ cd cloud && npm install && npm test
 ## Fichiers
 
 - `manifest.json` — MV3 (racine, Load unpacked)
-- `lib/shared.js` `lib/nego.js` `lib/guard.js` `lib/cloud.js` `lib/radar.js`
+- `lib/shared.js` `lib/nego.js` `lib/guard.js` `lib/cloud.js` `lib/radar.js` `lib/radar-chat.js`
 - `background.js` `content.js` `content-auto.js` `content-radar.js`
 - `options.*` `popup.*` `crm.*` `packing-slip.*`
 - `cloud/` — worker, Docker, Fly, tests

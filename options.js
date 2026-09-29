@@ -908,6 +908,21 @@ async function init() {
   if (tab === "cloud" && state.settings.cloudUrl) {
     renderCloudPanel();
   }
+  VCA.bindRadarChat({
+    log: document.getElementById("radarChatLog"),
+    input: document.getElementById("radarChatInput"),
+    send: document.getElementById("radarChatSend"),
+    onResult: async (res) => {
+      if (res?.mutated && Array.isArray(res.queries)) {
+        state.radarQueries = res.queries;
+        renderRadar();
+      }
+      if (res?.wantScan) {
+        state = await VCA.loadAll();
+        renderRadar();
+      }
+    }
+  });
 }
 
 init();

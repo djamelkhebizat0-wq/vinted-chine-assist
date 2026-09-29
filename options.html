@@ -13,7 +13,7 @@
         <div class="logo" aria-hidden="true"></div>
         <div>
           <h1>Vinted Chine Assist</h1>
-          <p>v1.4.0 · local + cloud + radar · personnel</p>
+          <p>v1.5.0 · local + cloud + radar · personnel</p>
         </div>
       </div>
       <nav>
@@ -262,6 +262,15 @@
           <button type="button" class="btn sm" id="btnRadarReset">Restaurer la pile Djamel</button>
         </div>
         <p class="desc" id="radarScanHint">Score A = notification silencieuse + pastille sur l’icône. Déjà vu : alerte seulement si le prix baisse d’au moins 5 €.</p>
+        <h3 class="mt">Chat Radar (local)</h3>
+        <p class="desc">Sans compte, sans IA externe. « mets Lacoste à 15 », « revente Nike 40 », « désactive Hawas », « scanner », « derniers deals ».</p>
+        <div class="chat" id="radarChat">
+          <div class="chat-log" id="radarChatLog" role="log" aria-live="polite"></div>
+          <div class="chat-row">
+            <input type="text" id="radarChatInput" maxlength="280" placeholder="Dis au Radar…" autocomplete="off" />
+            <button type="button" class="btn primary" id="radarChatSend">Envoyer</button>
+          </div>
+        </div>
         <h3 class="mt">Requêtes / marques</h3>
         <p class="desc">Achat max + revente estimée. Marge nette = revente − prix − frais CRM.</p>
         <div id="radarQueryList" class="list"></div>
@@ -314,6 +323,7 @@
   <script src="lib/nego.js"></script>
   <script src="lib/guard.js"></script>
   <script src="lib/radar.js"></script>
+  <script src="lib/radar-chat.js"></script>
   <script src="lib/cloud.js"></script>
   <script src="options.js"></script>
 </body>

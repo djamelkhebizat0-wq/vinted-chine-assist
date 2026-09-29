@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Vinted Chine Assist",
-  "version": "1.4.0",
-  "description": "Assistant vendeur Vinted (usage personnel) : négo, Mode auto, Cloud 24/7, Radar bonnes affaires — sans API officielle.",
+  "version": "1.5.0",
+  "description": "Assistant vendeur Vinted (usage personnel) : négo, Mode auto, Cloud 24/7, Radar + chat local — sans API officielle.",
   "minimum_chrome_version": "114",
   "permissions": [
     "storage",

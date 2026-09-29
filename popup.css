@@ -135,4 +135,33 @@ h1 {
   font-size: 15px;
 }
 .log li.score-A { color: var(--ok); font-weight: 700; }
+.chat { margin-top: 8px; }
+.chat-log {
+  max-height: 140px;
+  overflow: auto;
+  background: #f3f8f7;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+}
+.chat-msg {
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  margin: 4px 0;
+  color: var(--ink);
+}
+.chat-msg.me { color: var(--teal-dark); font-weight: 600; }
+.chat-msg.bot { color: var(--muted); }
+.chat-row { display: flex; gap: 6px; }
+.chat-row input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.btn.chat-send { flex: 0 0 auto; padding: 8px 12px; }
 .ft small { font-size: 10px; }
