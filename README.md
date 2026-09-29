@@ -1,4 +1,4 @@
-# Vinted Chine Assist 1.5.0
+# Vinted Chine Assist 1.5.1
 
 Extension Chrome **Manifest V3** pour **vinted.fr** (et vinted.com) : aide vendeur **locale**, usage **personnel**, plus un **prototype Cloud 24/7** optionnel (`cloud/`).
 
@@ -47,7 +47,7 @@ Veille auto : alarme Chrome tant que le navigateur tourne. Cloud (optionnel) : `
 
 ## Chat Radar (1.5)
 
-Dans le **popup** (carte Radar) ou **Paramètres → Radar** : un champ pour parler au Radar.
+En haut du **popup** (sous le titre Radar, avant Scanner) et en haut de **Paramètres → Radar**. Titre **Chat**, champ « Écris ici… ». Rechargez l’extension (v1.5.1) si le champ n’apparaît pas.
 
 **Pas de compte, pas d’IA externe, pas de clé API.** Le cerveau est local : scores A/B/C, pourquoi un article est sauté, pile (achat max / revente / marge), activer/désactiver, « mets Lacoste à 15 », « revente Nike 40 », « scanner », « derniers deals ». Phrase floue → une question. Jamais de prix Vinted inventés, jamais « authentique ».
 

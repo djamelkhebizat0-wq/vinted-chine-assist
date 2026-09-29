@@ -82,7 +82,7 @@ const settings = VCA.migrateSettings({ negotiationFloorPercent: 12, suggestCount
 assert(settings.maxDropPercent === 12 && settings.counterStepPercent === 6, "migrate old % settings");
 assert(settings.modeAuto === false, "mode auto default off");
 assert(settings.cloudEnabled === false, "cloud default off");
-assert(VCA.VERSION === "1.5.0", "version 1.5.0");
+assert(VCA.VERSION === "1.5.1", "version 1.5.1");
 assert(VCA.localAutoActive({ modeAuto: true, cloudEnabled: false }) === true, "local auto when no cloud");
 assert(VCA.localAutoActive({ modeAuto: true, cloudEnabled: true }) === false, "XOR: cloud blocks local auto");
 

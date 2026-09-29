@@ -135,9 +135,10 @@ h1 {
   font-size: 15px;
 }
 .log li.score-A { color: var(--ok); font-weight: 700; }
-.chat { margin-top: 8px; }
+.chat { margin: 8px 0 6px; }
+.chat-title { display: block; font-size: 12px; margin-bottom: 4px; }
 .chat-log {
-  max-height: 140px;
+  max-height: 88px;
   overflow: auto;
   background: #f3f8f7;
   border: 1px solid var(--border);

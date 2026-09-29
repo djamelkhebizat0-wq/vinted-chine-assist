@@ -11,7 +11,7 @@
     <div class="logo" aria-hidden="true"></div>
     <div>
       <h1>Vinted Chine Assist</h1>
-      <p class="sub">v1.5.0 · radar + chat local</p>
+      <p class="sub">v1.5.1 · radar + chat local</p>
     </div>
   </header>
 
@@ -20,18 +20,18 @@
       <strong>Radar</strong>
       <span class="dot" id="radarDot"></span>
     </div>
+    <div class="chat" id="radarChat">
+      <strong class="chat-title">Chat</strong>
+      <div class="chat-log" id="radarChatLog" role="log" aria-live="polite"></div>
+      <div class="chat-row">
+        <input type="text" id="radarChatInput" maxlength="280" placeholder="Écris ici…" autocomplete="off" />
+        <button type="button" class="btn primary chat-send" id="radarChatSend">OK</button>
+      </div>
+    </div>
     <p class="hint">Chrome ouvert (ou cloud). Pas d’API officielle · faux positifs possibles.</p>
     <button type="button" class="btn primary btn-scan" id="btnRadarScan">Scanner maintenant</button>
     <p class="hint" id="radarHint">Score A uniquement en notification (silencieuse) + pastille.</p>
     <ul class="log" id="radarInbox"></ul>
-    <div class="chat" id="radarChat">
-      <div class="chat-log" id="radarChatLog" role="log" aria-live="polite"></div>
-      <div class="chat-row">
-        <input type="text" id="radarChatInput" maxlength="280" placeholder="Dis au Radar…" autocomplete="off" />
-        <button type="button" class="btn primary chat-send" id="radarChatSend">OK</button>
-      </div>
-      <p class="hint">Local, sans compte. Ex. « mets Lacoste à 15 »</p>
-    </div>
     <nav class="actions">
       <button type="button" class="btn ghost" id="btnRadarOpts">Réglages Radar…</button>
     </nav>
