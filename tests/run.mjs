@@ -82,7 +82,7 @@ const settings = VCA.migrateSettings({ negotiationFloorPercent: 12, suggestCount
 assert(settings.maxDropPercent === 12 && settings.counterStepPercent === 6, "migrate old % settings");
 assert(settings.modeAuto === false, "mode auto default off");
 assert(settings.cloudEnabled === false, "cloud default off");
-assert(VCA.VERSION === "1.5.1", "version 1.5.1");
+assert(VCA.VERSION === "1.5.2", "version 1.5.2");
 assert(VCA.localAutoActive({ modeAuto: true, cloudEnabled: false }) === true, "local auto when no cloud");
 assert(VCA.localAutoActive({ modeAuto: true, cloudEnabled: true }) === false, "XOR: cloud blocks local auto");
 
@@ -182,6 +182,46 @@ assert(added.mutated && added.queries.some((q) => /polo/i.test(q.query) && q.buy
 
 const cosm = VCA.radarChatTurn("je peux vendre un tester ?", chatBase);
 assert(/tester/i.test(cosm.reply) && /contrefa/i.test(cosm.reply), "chat cosmetics rules");
+
+function spoken(phrase) {
+  const r = VCA.radarChatTurn(phrase, chatBase);
+  assert(!/pas compris/i.test(r.reply), `spoken not pas-compris: ${phrase}`);
+  return r;
+}
+const spA = spoken("c'est quoi un score A");
+assert(/marge|drapeau|pastille/i.test(spA.reply), "spoken score A");
+const spA2 = spoken("c'est quoi un A");
+assert(/\bA\s*=/i.test(spA2.reply), "spoken c'est quoi un A");
+const spB = spoken("pourquoi c'est un B");
+assert(/\bB\s*=/i.test(spB.reply), "spoken pourquoi c'est un B");
+const spSkip = spoken("pourquoi tu l'as ignoré");
+assert(/achat max|drapeau|déjà vu|deja vu/i.test(spSkip.reply), "spoken ignored");
+const spHow = spoken("comment ça scanne");
+assert(/alarme|catalogue|score/i.test(spHow.reply), "spoken comment ça scanne");
+const spHow2 = spoken("ça marche comment");
+assert(/alarme|catalogue|score/i.test(spHow2.reply), "spoken ça marche comment");
+const spMarge = spoken("c'est quoi la marge");
+assert(/revente|seuil|mini/i.test(spMarge.reply), "spoken marge");
+const spBaisse = spoken("baisse lacoste a 15");
+assert(spBaisse.mutated && spBaisse.queries.find((q) => q.id === "lacoste").buyMax === 15, "spoken baisse lacoste a 15");
+const spMax = spoken("Lacoste max 15 euros");
+assert(spMax.mutated && spMax.queries.find((q) => q.id === "lacoste").buyMax === 15, "spoken Lacoste max 15 euros");
+const spOff = spoken("je veux pas Hawas");
+assert(spOff.mutated && spOff.queries.find((q) => q.id === "hawas").enabled === false, "spoken je veux pas Hawas");
+const spOn = spoken("remets Nike");
+assert(spOn.queries.find((q) => q.id === "nike").enabled !== false, "spoken remets Nike");
+const spAdd = spoken("ajoute les polos Ralph Lauren");
+assert(spAdd.mutated && spAdd.queries.some((q) => /ralph/i.test(q.query || q.brand)), "spoken add ralph");
+const spDeals = spoken("montre moi les derniers");
+assert(/deal|boîte|boite|scan/i.test(spDeals.reply), "spoken montre moi les derniers");
+const spAff = spoken("montre les affaires");
+assert(/deal|boîte|boite|scan/i.test(spAff.reply), "spoken montre les affaires");
+const spLance = spoken("lance un scan");
+assert(spLance.wantScan === true, "spoken lance un scan");
+const spPile = spoken("c'est quoi mes recherches");
+assert(/ON · achat/i.test(spPile.reply), "spoken mes recherches");
+const spGuess = spoken("asdf qwerty");
+assert(/[?]/.test(spGuess.reply) && !/liste.*scanner.*deals/i.test(spGuess.reply), "spoken unclear is one guess");
 
 const hist = VCA.radarChatAppend([], "hi", "ok");
 assert(hist.length === 2, "chat append pair");
